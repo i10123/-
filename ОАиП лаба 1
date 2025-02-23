@@ -1,7 +1,8 @@
 #include <iostream>
-#include <string>
+#include <windows.h>
 #include <locale>
-#include <algorithm> // для функции reverse
+#include <string>
+#include <algorithm>
 
 using namespace std;
 
@@ -11,7 +12,7 @@ void inputNumbers(int* massiv, int size) {
         while (!(cin >> massiv[i])) {
             cout << "Ошибка ввода! Пожалуйста, введите число: ";
             cin.clear(); // Очищает поток ввода
-            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Игнорирует оставшийся ввод
+            cin.ignore(); // Игнорирует оставшийся ввод
         }
     }
 }
@@ -45,6 +46,8 @@ int countOInFirstWord(const string& sentence) {
 
 int main() {
     setlocale(LC_ALL, "RU");
+    SetConsoleCP(1251);
+    SetConsoleOutputCP(1251);
 
     cout << "Номера задач: \n";
     cout << "Выход из программы - 0 \n";
@@ -57,7 +60,7 @@ int main() {
         short int n;
         cout << "Введите номер задачи: ";
         cin >> n;
-        cin.ignore(); // Игнорирует оставшийся символ новой строки после ввода номера задачи
+        cin.ignore();
         switch (n) {
         case 0: {
             cout << "Завершение программы." << endl;
@@ -121,7 +124,6 @@ int main() {
             break;
         }
         case 3: {
-            // не работает с русским
             string word;
             cout << "Введите слово: ";
             cin >> word;
@@ -131,7 +133,6 @@ int main() {
             break;
         }
         case 4: {
-            // не читает О
             string sentence;
             cout << "Введите предложение: ";
             getline(cin, sentence);
