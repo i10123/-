@@ -1,0 +1,150 @@
+#include <iostream>
+#include <string>
+#include <locale>
+#include <algorithm> // для функции reverse
+
+using namespace std;
+
+void inputNumbers(int* massiv, int size) {
+    cout << "Введите " << size << " чисел:" << endl;
+    for (int i = 0; i < size; i++) {
+        while (!(cin >> massiv[i])) {
+            cout << "Ошибка ввода! Пожалуйста, введите число: ";
+            cin.clear(); // Очищает поток ввода
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Игнорирует оставшийся ввод
+        }
+    }
+}
+
+string reverseString(const string& str) {
+    string reversed = str;
+    reverse(reversed.begin(), reversed.end());
+    return reversed;
+}
+
+int countOInFirstWord(const string& sentence) {
+    int count = 0;
+    bool inFirstWord = false;
+
+    for (char c : sentence) {
+        if (c != ' ' && !inFirstWord) {
+            inFirstWord = true;
+        }
+        if (inFirstWord) {
+            if (c == ' ' || c == '.') {
+                break;
+            }
+            if (c == 'о' || c == 'О') {
+                count++;
+            }
+        }
+    }
+
+    return count;
+}
+
+int main() {
+    setlocale(LC_ALL, "RU");
+
+    cout << "Номера задач: \n";
+    cout << "Выход из программы - 0 \n";
+    cout << "11.22 - 1 \n";
+    cout << "11.96 - 2 \n";
+    cout << "12.42 - 3 \n";
+    cout << "12.88 - 4 \n";
+
+    while (true) {
+        short int n;
+        cout << "Введите номер задачи: ";
+        cin >> n;
+        cin.ignore(); // Игнорирует оставшийся символ новой строки после ввода номера задачи
+        switch (n) {
+        case 0: {
+            cout << "Завершение программы." << endl;
+            return 0;
+        }
+        case 1: {
+            const int SIZE = 10;
+            int massiv[SIZE];
+            inputNumbers(massiv, SIZE);
+
+            cout << "Неотрицательные элементы: ";
+            for (int i = 0; i < SIZE; i++) {
+                if (massiv[i] >= 0) {
+                    cout << massiv[i] << " ";
+                }
+            }
+            cout << endl;
+
+            cout << "Элементы, не превышающие число 100: ";
+            for (int i = 0; i < SIZE; i++) {
+                if (massiv[i] <= 100) {
+                    cout << massiv[i] << " ";
+                }
+            }
+            cout << endl;
+            break;
+        }
+        case 2: {
+            const int SIZE = 10;
+            int massiv[SIZE];
+            inputNumbers(massiv, SIZE);
+
+            // Нахождение максимального и минимального элементов
+            int maxElement = massiv[0];
+            int minElement = massiv[0];
+            for (int i = 1; i < SIZE; i++) {
+                if (massiv[i] > maxElement) {
+                    maxElement = massiv[i];
+                }
+                if (massiv[i] < minElement) {
+                    minElement = massiv[i];
+                }
+            }
+            cout << "Максимальный элемент: " << maxElement << endl;
+            cout << "Минимальный элемент: " << minElement << endl;
+
+            // Нахождение среднего арифметического
+            float average = (maxElement + minElement) / 2.0;
+            cout << "Среднее арифметическое минимального и максимального элементов: " << average << endl;
+
+            // Количество и номера элементов, значение которых больше среднего арифметического
+            int count = 0;
+            cout << "Элементы больше среднего арифметического и их номера: ";
+            for (int i = 0; i < SIZE; i++) {
+                if (massiv[i] > average) {
+                    cout << "[" << i + 1 << "]=" << massiv[i] << " ";
+                    count++;
+                }
+            }
+            cout << endl << "Количество таких элементов: " << count << endl;
+            break;
+        }
+        case 3: {
+            // не работает с русским
+            string word;
+            cout << "Введите слово: ";
+            cin >> word;
+
+            string reversedWord = reverseString(word);
+            cout << "Перевернутое слово: " << reversedWord << endl;
+            break;
+        }
+        case 4: {
+            // не читает О
+            string sentence;
+            cout << "Введите предложение: ";
+            getline(cin, sentence);
+
+            int count = countOInFirstWord(sentence);
+            cout << "Количество букв 'о' в первом слове: " << count << endl;
+            break;
+        }
+        default:
+            cout << "Неправильный выбор. Пожалуйста, выберите задание от 0 до 4." << endl;
+            break;
+        }
+    }
+
+    return 0;
+}
