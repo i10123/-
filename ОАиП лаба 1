@@ -2,7 +2,7 @@
 #include <windows.h>
 #include <locale>
 #include <string>
-#include <algorithm>
+#include <algorithm> // reverse()
 
 using namespace std;
 
@@ -10,7 +10,7 @@ void inputNumbers(int* massiv, int size) {
     cout << "Введите " << size << " чисел:" << endl;
     for (int i = 0; i < size; i++) {
         while (!(cin >> massiv[i])) {
-            cout << "Ошибка ввода! Пожалуйста, введите число: ";
+            cout << "Ошибка! Пожалуйста, введите число: ";
             cin.clear(); // Очищает поток ввода
             cin.ignore(); // Игнорирует оставшийся ввод
         }
@@ -27,15 +27,15 @@ int countOInFirstWord(const string& sentence) {
     int count = 0;
     bool inFirstWord = false;
 
-    for (char c : sentence) {
+    for (char c : sentence) { // перебирается каждый символ строки
         if (c != ' ' && !inFirstWord) {
             inFirstWord = true;
         }
         if (inFirstWord) {
-            if (c == ' ' || c == '.') {
+            if (c == ' ' || c == '.') { // конец первого слова
                 break;
             }
-            if (c == 'о' || c == 'О') {
+            if (c == 'о' || c == 'О') { // счёт букв "о"
                 count++;
             }
         }
@@ -134,8 +134,8 @@ int main() {
         }
         case 4: {
             string sentence;
-            cout << "Введите предложение: ";
-            getline(cin, sentence);
+            cout << "Введите предложение без '-': ";
+            getline(cin, sentence); // функция для считывания строки
 
             int count = countOInFirstWord(sentence);
             cout << "Количество букв 'о' в первом слове: " << count << endl;
@@ -146,6 +146,5 @@ int main() {
             break;
         }
     }
-
     return 0;
 }
