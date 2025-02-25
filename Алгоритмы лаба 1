@@ -1,13 +1,10 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <sstream>
-#include <clocale>  // Для setlocale
 
 using namespace std;
 
 // Ввод матрицы пользователем
-// Создается двумерый вектор для двумерного массива
 vector<vector<int>> inputMatrix(int m, int n) {
     vector<vector<int>> matrix(m, vector<int>(n));
 
@@ -20,32 +17,28 @@ vector<vector<int>> inputMatrix(int m, int n) {
 
     return matrix;
 }
+
 // Функция для вычисления объема воды
 int calculateWaterVolume(const vector<vector<int>>& heightMap) {
     int m = heightMap.size(); // количество строк
     int n = heightMap[0].size(); // количество столбцов
 
-    // Если матрица меньше 3x3, воды не остается
     if (m < 3 || n < 3) {
         return 0;
     }
 
-    // Находим минимальное значение на контуре (без угловых блоков)
     int minPerimeter = INT_MAX;
 
-    // Верхняя и нижняя строки (без углов)
     for (int j = 1; j < n - 1; j++) {
-        minPerimeter = min(minPerimeter, heightMap[0][j]);        // Верхняя строка
-        minPerimeter = min(minPerimeter, heightMap[m - 1][j]);   // Нижняя строка
+        minPerimeter = min(minPerimeter, heightMap[0][j]);
+        minPerimeter = min(minPerimeter, heightMap[m - 1][j]);
     }
 
-    // Левый и правый столбцы (без углов)
     for (int i = 1; i < m - 1; ++i) {
-        minPerimeter = min(minPerimeter, heightMap[i][0]);        // Левый столбец
-        minPerimeter = min(minPerimeter, heightMap[i][n - 1]);   // Правый столбец
+        minPerimeter = min(minPerimeter, heightMap[i][0]);
+        minPerimeter = min(minPerimeter, heightMap[i][n - 1]);
     }
 
-    // Вычисляем объем воды для внутренних блоков
     int totalVolume = 0;
 
     for (int i = 1; i < m - 1; ++i) {
@@ -59,14 +52,13 @@ int calculateWaterVolume(const vector<vector<int>>& heightMap) {
     return totalVolume;
 }
 
-
 // Функция для вычисления префикс-функции
 vector<int> computePrefixFunction(const string& pattern) {
     int m = pattern.length();
     vector<int> pi(m);
     pi[0] = 0;
     int k = 0;
-    for (int q = 1; q < m; ++q) {
+    for (int q = 1; q < m; q++) {
         while (k > 0 && pattern[k] != pattern[q]) {
             k = pi[k - 1];
         }
@@ -77,15 +69,19 @@ vector<int> computePrefixFunction(const string& pattern) {
     }
     return pi;
 }
+
 // Функция для поиска подстроки с использованием алгоритма КМП
-void KMPSearch(const string& text, const string& pattern) {
+int KMPSearch(const string& text, const string& pattern) {
     int n = text.length();
     int m = pattern.length();
     vector<int> pi = computePrefixFunction(pattern);
     int q = 0; // количество совпавших символов
-    for (int i = 0; i < n; ++i) {
+    int operations = 0; // счетчик операций
+
+    for (int i = 0; i < n; i++) {
         while (q > 0 && pattern[q] != text[i]) {
             q = pi[q - 1];
+            operations++;
         }
         if (pattern[q] == text[i]) {
             q++;
@@ -94,9 +90,11 @@ void KMPSearch(const string& text, const string& pattern) {
             cout << "Шаблон найден на позиции " << i - m + 1 << endl;
             q = pi[q - 1];
         }
+        operations++;
     }
-}
 
+    return operations;
+}
 
 // Функция для вычисления среднего арифметического
 double calculateAverage(const vector<int>& numbers) {
@@ -108,12 +106,11 @@ double calculateAverage(const vector<int>& numbers) {
 }
 
 int main() {
-    setlocale(LC_ALL, "Russian");  // Устанавливаем локаль для поддержки русского языка
+    setlocale(LC_ALL, "Russian");
     cout << "Номера задач: \n";
     cout << "Выход из программы - 0 \n";
     cout << "Задача №9 - 1 \n";
     cout << "Задача №26 - 2 \n";
-    cout << "Среднее число операций - 3 \n";
 
     while (true) {
         short int n;
@@ -133,44 +130,34 @@ int main() {
             cout << "Введите количество столбцов (n): ";
             cin >> n;
 
-            // Ввод матрицы пользователем
             cout << "Введите матрицу " << m << "x" << n << ":" << endl;
             vector<vector<int>> heightMap = inputMatrix(m, n);
 
-            // Вычисление объема воды
             int volume = calculateWaterVolume(heightMap);
             cout << "Объем воды во внутренних блоках: " << volume << endl;
             break;
         }
         case 2: {
-            string text, pattern;
-            cout << "Введите текст T: ";
-            cin >> text;
-            cout << "Введите шаблон P: ";
-            cin >> pattern;
-            KMPSearch(text, pattern);
-            break;
-        }
-        case 3: {
-            cout << "Введите числа через пробел: ";
-            string input;
-            getline(cin, input);
+            int seriesCount;
+            cout << "Введите количество серий экспериментов: ";
+            cin >> seriesCount;
+            cin.ignore();
 
-            stringstream ss(input);
-            vector<int> numbers;
-            int number;
+            vector<int> operationsCount;
 
-            while (ss >> number) {
-                numbers.push_back(number);
+            for (int i = 0; i < seriesCount; i++) {
+                string text, pattern;
+                cout << "Введите текст T: ";
+                getline(cin, text);
+                cout << "Введите шаблон P: ";
+                getline(cin, pattern);
+
+                int operations = KMPSearch(text, pattern);
+                operationsCount.push_back(operations);
             }
 
-            if (numbers.empty()) {
-                cout << "Ввод не содержит чисел." << endl;
-            }
-            else {
-                double average = calculateAverage(numbers);
-                cout << "Среднее арифметическое: " << average << endl;
-            }
+            double averageOperations = calculateAverage(operationsCount);
+            cout << "Среднее число операций: " << averageOperations << endl;
             break;
         }
         default: {
