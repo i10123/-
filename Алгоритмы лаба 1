@@ -1,23 +1,22 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <algorithm>
+#include <limits>
 
 using namespace std;
 
 // Ввод матрицы пользователем
 vector<vector<int>> inputMatrix(int m, int n) {
     vector<vector<int>> matrix(m, vector<int>(n));
-
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
             cout << "Введите A" << i + 1 << j + 1 << ": ";
             cin >> matrix[i][j];
         }
     }
-
     return matrix;
 }
-
 // Функция для вычисления объема воды
 int calculateWaterVolume(const vector<vector<int>>& heightMap) {
     int m = heightMap.size(); // количество строк
@@ -34,15 +33,15 @@ int calculateWaterVolume(const vector<vector<int>>& heightMap) {
         minPerimeter = min(minPerimeter, heightMap[m - 1][j]);
     }
 
-    for (int i = 1; i < m - 1; ++i) {
+    for (int i = 1; i < m - 1; i++) {
         minPerimeter = min(minPerimeter, heightMap[i][0]);
         minPerimeter = min(minPerimeter, heightMap[i][n - 1]);
     }
 
     int totalVolume = 0;
 
-    for (int i = 1; i < m - 1; ++i) {
-        for (int j = 1; j < n - 1; ++j) {
+    for (int i = 1; i < m - 1; i++) {
+        for (int j = 1; j < n - 1; j++) {
             if (minPerimeter > heightMap[i][j]) {
                 totalVolume += minPerimeter - heightMap[i][j];
             }
@@ -51,6 +50,35 @@ int calculateWaterVolume(const vector<vector<int>>& heightMap) {
 
     return totalVolume;
 }
+
+
+// Обновленная функция для case 2
+void calculateWaterVolumeWithUserInput(const vector<vector<int>>& heightMap, int x, int y, int V) {
+    int m = heightMap.size();
+    int n = heightMap[0].size();
+
+    int minPerimeter = numeric_limits<int>::max();
+    for (int j = 1; j < n - 1; j++) {
+        minPerimeter = min(minPerimeter, heightMap[0][j]);
+        minPerimeter = min(minPerimeter, heightMap[m - 1][j]);
+    }
+    for (int i = 1; i < m - 1; ++i) {
+        minPerimeter = min(minPerimeter, heightMap[i][0]);
+        minPerimeter = min(minPerimeter, heightMap[i][n - 1]);
+    }
+
+    int totalVolume = calculateWaterVolume(heightMap);
+    if (x == 1 || x == m || y == 1 || y == n) {
+        cout << "Объем воды: " << min(V / 2, totalVolume) << endl;
+    }
+    else if (V < totalVolume) {
+        cout << "Объем воды: " << V / 2 << endl;
+    }
+    else {
+        cout << "Объем воды: " << totalVolume << endl;
+    }
+}
+
 
 // Функция для вычисления префикс-функции
 vector<int> computePrefixFunction(const string& pattern) {
@@ -69,7 +97,6 @@ vector<int> computePrefixFunction(const string& pattern) {
     }
     return pi;
 }
-
 // Функция для поиска подстроки с использованием алгоритма КМП
 int KMPSearch(const string& text, const string& pattern) {
     int n = text.length();
@@ -95,7 +122,6 @@ int KMPSearch(const string& text, const string& pattern) {
 
     return operations;
 }
-
 // Функция для вычисления среднего арифметического
 double calculateAverage(const vector<int>& numbers) {
     int sum = 0;
@@ -105,12 +131,14 @@ double calculateAverage(const vector<int>& numbers) {
     return static_cast<double>(sum) / numbers.size();
 }
 
+
 int main() {
     setlocale(LC_ALL, "Russian");
     cout << "Номера задач: \n";
     cout << "Выход из программы - 0 \n";
-    cout << "Задача №9 - 1 \n";
-    cout << "Задача №26 - 2 \n";
+    cout << "Задача №9 (часть 1) - 1 \n";
+    cout << "Задача №9 (часть 2) - 2 \n";
+    cout << "Задача №26 - 3 \n";
 
     while (true) {
         short int n;
@@ -134,10 +162,30 @@ int main() {
             vector<vector<int>> heightMap = inputMatrix(m, n);
 
             int volume = calculateWaterVolume(heightMap);
-            cout << "Объем воды во внутренних блоках: " << volume << endl;
+            cout << "Объем воды в блоках: " << volume << endl;
             break;
         }
         case 2: {
+            int m, n, x, y, V;
+            cout << "Введите количество строк (m): ";
+            cin >> m;
+            cout << "Введите количество столбцов (n): ";
+            cin >> n;
+
+            cout << "Введите матрицу " << m << "x" << n << ":" << endl;
+            vector<vector<int>> heightMap = inputMatrix(m, n);
+
+            cout << "Введите номер строки (x): ";
+            cin >> x;
+            cout << "Введите номер столбца (y): ";
+            cin >> y;
+            cout << "Введите количество воды (V): ";
+            cin >> V;
+
+            calculateWaterVolumeWithUserInput(heightMap, x - 1, y - 1, V);
+            break;
+        }
+        case 3: {
             int seriesCount;
             cout << "Введите количество серий экспериментов: ";
             cin >> seriesCount;
