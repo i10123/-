@@ -59,6 +59,13 @@ fraction add(fraction a, fraction b) {
 void print(fraction f) {
     cout << f.num << "/" << f.den << endl;
 }
+void ex1() {
+    fraction f1 = input();
+    fraction f2 = input();
+    fraction sum = add(f1, f2);
+    cout << "Сумма дробей: ";
+    print(sum);
+}
 
 struct Student {
     string fio; // ФИО
@@ -96,6 +103,23 @@ int FailingStudents(const vector<Student>& students, int course) {
     }
     return count;
 }
+void ex2() {
+    int n;
+    cout << "Введите количество студентов: ";
+    cin >> n;
+    vector<Student> students(n);
+    for (int i = 0; i < n; i++) {
+        cout << "Введите информацию о студенте " << i + 1 << ":" << endl;
+        inputStudent(students[i]);
+    }
+
+    cout << "Введите номер курса для проверки: ";
+    int course;
+    cin >> course;
+
+    int failingStudents = FailingStudents(students, course);
+    cout << "Количество неуспевающих студентов на курсе " << course << " : " << failingStudents << endl;
+}
 
 int main() {
     setlocale(LC_ALL, "Russian");
@@ -108,7 +132,6 @@ int main() {
         short int n;
         cout << "Введите номер задачи: ";
         cin >> n;
-        cin.ignore();
 
         switch (n) {
         case 0: {
@@ -116,29 +139,11 @@ int main() {
             return 0;
         }
         case 1: {
-            fraction f1 = input();
-            fraction f2 = input();
-            fraction sum = add(f1, f2);
-            cout << "Сумма дробей: ";
-            print(sum);
+            ex1();
             break;
         }
         case 2: {
-            int n;
-            cout << "Введите количество студентов: ";
-            cin >> n;
-            vector<Student> students(n);
-            for (int i = 0; i < n; i++) {
-                cout << "Введите информацию о студенте " << i + 1 << ":" << endl;
-                inputStudent(students[i]);
-            }
-
-            cout << "Введите номер курса для проверки: ";
-            int course;
-            cin >> course;
-
-            int failingStudents = FailingStudents(students, course);
-            cout << "Количество неуспевающих студентов на курсе " << course << " : " << failingStudents << endl;
+            ex2();
             break;
         }
         default: {
