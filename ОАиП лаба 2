@@ -8,7 +8,7 @@ struct fraction {
     int num; // числитель
     int den; // знаменатель
 };
-fraction read() {
+fraction input() {
     fraction f;
     while (true) {
         cout << "Введите числитель: ";
@@ -27,7 +27,7 @@ fraction read() {
         cin >> f.den;
         if (cin.fail() || f.den == 0) {
             cin.clear();
-            cin.ignore(INT_MAX, '\n'); 
+            cin.ignore(INT_MAX, '\n');
             cout << "Ошибка ввода. Введите целое число, отличное от нуля." << endl;
         }
         else {
@@ -64,11 +64,11 @@ struct Student {
     string fio; // ФИО
     int age; // возраст
     int course; // курс
-    int grades[3]; // успеваемость (оценки по 3 предметам)
+    int grades[3]; // успеваемость
 };
 void inputStudent(Student& student) {
     cout << "Введите ФИО: ";
-    getline(cin >> ws, student.fio);
+    getline(cin >> ws, student.fio); // пробелы перед вводом будут проигнорированы
     cout << "Введите возраст: ";
     cin >> student.age;
     cout << "Введите курс: ";
@@ -78,7 +78,7 @@ void inputStudent(Student& student) {
         cin >> student.grades[i];
     }
 }
-int countFailingStudents(const vector<Student>& students, int course) {
+int FailingStudents(const vector<Student>& students, int course) {
     int count = 0;
     for (const auto& student : students) {
         if (student.course == course) {
@@ -116,8 +116,8 @@ int main() {
             return 0;
         }
         case 1: {
-            fraction f1 = read();
-            fraction f2 = read();
+            fraction f1 = input();
+            fraction f2 = input();
             fraction sum = add(f1, f2);
             cout << "Сумма дробей: ";
             print(sum);
@@ -137,7 +137,7 @@ int main() {
             int course;
             cin >> course;
 
-            int failingStudents = countFailingStudents(students, course);
+            int failingStudents = FailingStudents(students, course);
             cout << "Количество неуспевающих студентов на курсе " << course << " : " << failingStudents << endl;
             break;
         }
