@@ -44,6 +44,77 @@ int countOInFirstWord(const string& sentence) {
     return count;
 }
 
+void ex1() {
+    const int SIZE = 10;
+    int massiv[SIZE];
+    inputNumbers(massiv, SIZE);
+
+    cout << "Неотрицательные элементы: ";
+    for (int i = 0; i < SIZE; i++) {
+        if (massiv[i] >= 0) {
+            cout << massiv[i] << " ";
+        }
+    }
+    cout << endl;
+
+    cout << "Элементы, не превышающие число 100: ";
+    for (int i = 0; i < SIZE; i++) {
+        if (massiv[i] <= 100) {
+            cout << massiv[i] << " ";
+        }
+    }
+    cout << endl;
+}
+void ex2() {
+    const int SIZE = 10;
+    int massiv[SIZE];
+    inputNumbers(massiv, SIZE);
+
+    // Нахождение максимального и минимального элементов
+    int maxElement = massiv[0];
+    int minElement = massiv[0];
+    for (int i = 1; i < SIZE; i++) {
+        if (massiv[i] > maxElement) {
+            maxElement = massiv[i];
+        }
+        if (massiv[i] < minElement) {
+            minElement = massiv[i];
+        }
+    }
+    cout << "Максимальный элемент: " << maxElement << endl;
+    cout << "Минимальный элемент: " << minElement << endl;
+
+    float average = (maxElement + minElement) / 2.0;
+    cout << "Среднее арифметическое минимального и максимального элементов: " << average << endl;
+
+    // Количество и номера элементов, значение которых больше среднего арифметического
+    int count = 0;
+    cout << "Элементы больше среднего арифметического и их номера: ";
+    for (int i = 0; i < SIZE; i++) {
+        if (massiv[i] > average) {
+            cout << "[" << i + 1 << "]=" << massiv[i] << " ";
+            count++;
+        }
+    }
+    cout << endl << "Количество таких элементов: " << count << endl;
+}
+void ex3() {
+    string word;
+    cout << "Введите слово: ";
+    cin >> word;
+
+    string reversedWord = reverseString(word);
+    cout << "Перевернутое слово: " << reversedWord << endl;
+}
+void ex4() {
+    string sentence;
+    cout << "Введите предложение без '-': ";
+    getline(cin, sentence);
+
+    int count = countOInFirstWord(sentence);
+    cout << "Количество букв 'о' в первом слове: " << count << endl;
+}
+
 int main() {
     setlocale(LC_ALL, "RU");
     SetConsoleCP(1251);
@@ -61,84 +132,26 @@ int main() {
         cout << "Введите номер задачи: ";
         cin >> n;
         cin.ignore();
+
         switch (n) {
         case 0: {
             cout << "Завершение программы." << endl;
             return 0;
         }
         case 1: {
-            const int SIZE = 10;
-            int massiv[SIZE];
-            inputNumbers(massiv, SIZE);
-
-            cout << "Неотрицательные элементы: ";
-            for (int i = 0; i < SIZE; i++) {
-                if (massiv[i] >= 0) {
-                    cout << massiv[i] << " ";
-                }
-            }
-            cout << endl;
-
-            cout << "Элементы, не превышающие число 100: ";
-            for (int i = 0; i < SIZE; i++) {
-                if (massiv[i] <= 100) {
-                    cout << massiv[i] << " ";
-                }
-            }
-            cout << endl;
+            ex1();
             break;
         }
         case 2: {
-            const int SIZE = 10;
-            int massiv[SIZE];
-            inputNumbers(massiv, SIZE);
-
-            // Нахождение максимального и минимального элементов
-            int maxElement = massiv[0];
-            int minElement = massiv[0];
-            for (int i = 1; i < SIZE; i++) {
-                if (massiv[i] > maxElement) {
-                    maxElement = massiv[i];
-                }
-                if (massiv[i] < minElement) {
-                    minElement = massiv[i];
-                }
-            }
-            cout << "Максимальный элемент: " << maxElement << endl;
-            cout << "Минимальный элемент: " << minElement << endl;
-
-            // Нахождение среднего арифметического
-            float average = (maxElement + minElement) / 2.0;
-            cout << "Среднее арифметическое минимального и максимального элементов: " << average << endl;
-
-            // Количество и номера элементов, значение которых больше среднего арифметического
-            int count = 0;
-            cout << "Элементы больше среднего арифметического и их номера: ";
-            for (int i = 0; i < SIZE; i++) {
-                if (massiv[i] > average) {
-                    cout << "[" << i + 1 << "]=" << massiv[i] << " ";
-                    count++;
-                }
-            }
-            cout << endl << "Количество таких элементов: " << count << endl;
+            ex2();
             break;
         }
         case 3: {
-            string word;
-            cout << "Введите слово: ";
-            cin >> word;
-
-            string reversedWord = reverseString(word);
-            cout << "Перевернутое слово: " << reversedWord << endl;
+            ex3();
             break;
         }
         case 4: {
-            string sentence;
-            cout << "Введите предложение без '-': ";
-            getline(cin, sentence); // функция для считывания строки
-
-            int count = countOInFirstWord(sentence);
-            cout << "Количество букв 'о' в первом слове: " << count << endl;
+            ex4();
             break;
         }
         default:
