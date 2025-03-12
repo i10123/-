@@ -16,7 +16,7 @@ fraction input() {
         if (cin.fail()) {
             cin.clear(); // очищаем флаги ошибок
             cin.ignore(INT_MAX, '\n'); // игнорируем оставшиеся символы до конца строки
-            cout << "Ошибка ввода. Пожалуйста, введите целое число." << endl;
+            cout << "Ошибка, введите целое число." << endl;
         }
         else {
             break;
@@ -28,7 +28,7 @@ fraction input() {
         if (cin.fail() || f.den == 0) {
             cin.clear();
             cin.ignore(INT_MAX, '\n');
-            cout << "Ошибка ввода. Введите целое число, отличное от нуля." << endl;
+            cout << "Ошибка, введите целое число, отличное от нуля." << endl;
         }
         else {
             break;
@@ -56,15 +56,12 @@ fraction add(fraction a, fraction b) {
     result.den = a.den * b.den;
     return Short(result);
 }
-void print(fraction f) {
-    cout << f.num << "/" << f.den << endl;
-}
 void ex1() {
     fraction f1 = input();
     fraction f2 = input();
     fraction sum = add(f1, f2);
     cout << "Сумма дробей: ";
-    print(sum);
+    cout << sum.num << "/" << sum.den << endl;
 }
 
 struct Student {
@@ -75,14 +72,63 @@ struct Student {
 };
 void inputStudent(Student& student) {
     cout << "Введите ФИО: ";
-    getline(cin >> ws, student.fio); // пробелы перед вводом будут проигнорированы
-    cout << "Введите возраст: ";
-    cin >> student.age;
-    cout << "Введите курс: ";
-    cin >> student.course;
+    cin.ignore();
+    getline(cin, student.fio);
+
+    bool isAGE = false;
+    while (!isAGE) {
+        cout << "Введите возраст: ";
+        if (cin >> student.age) {
+            if (student.age >= 17 && student.age <= 100) {
+                isAGE = true; 
+            }
+            else {
+                cout << "Ошибка: возраст должен быть больше 17 и меньше 100. \n";
+            }
+        }
+        else {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка: введено не число. \n";
+        }
+    }
+
+    bool isCOURSE = false;
+    while (!isCOURSE) {
+        cout << "Введите номер курса (1-6) для проверки: ";
+        if (cin >> student.course) {
+            if (student.course >= 1 && student.course <= 6) {
+                isCOURSE = true; // выходим из цикла
+            }
+            else {
+                cout << "Ошибка: номер курса должен быть от 1 до 6. \n";
+            }
+        }
+        else {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка: введено не число. \n";
+        }
+    }
+
     cout << "Введите оценки по 3 предметам: ";
     for (int i = 0; i < 3; i++) {
-        cin >> student.grades[i];
+        bool isGRADES = false;
+        while (!isGRADES) {
+            if (cin >> student.grades[i]) {
+                if (student.grades[i] >= 1 && student.grades[i] <= 10) {
+                    isGRADES = true; // выходим из цикла
+                }
+                else {
+                    cout << "Ошибка: оценки должны быть от 1 до 10. \n";
+                }
+            }
+            else {
+                cin.clear();
+                cin.ignore(INT_MAX, '\n');
+                cout << "Ошибка: введено не число. \n";
+            }
+        }
     }
 }
 int FailingStudents(const vector<Student>& students, int course) {
@@ -105,17 +151,51 @@ int FailingStudents(const vector<Student>& students, int course) {
 }
 void ex2() {
     int n;
-    cout << "Введите количество студентов: ";
-    cin >> n;
+    bool isCOUNT = false;
+
+    while (!isCOUNT) {
+        cout << "Введите количество студентов: ";
+        if (cin >> n) {
+            if (n >= 1) {
+                isCOUNT = true; // выходим из цикла
+            }
+            else {
+                cout << "Ошибка: количество студентов должно быть больше 1. \n";
+            }
+        }
+        else {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка: введено не число. Попробуйте снова.\n";
+        }
+    }
+
+
     vector<Student> students(n);
     for (int i = 0; i < n; i++) {
         cout << "Введите информацию о студенте " << i + 1 << ":" << endl;
         inputStudent(students[i]);
     }
 
-    cout << "Введите номер курса для проверки: ";
     int course;
-    cin >> course;
+    bool isValid = false;
+
+    while (!isValid) {
+        cout << "Введите номер курса (1-6) для проверки: ";
+        if (cin >> course) {
+            if (course >= 1 && course <= 6) {
+                isValid = true; // выходим из цикла
+            }
+            else {
+                cout << "Ошибка: номер курса должен быть от 1 до 6. Попробуйте снова.\n";
+            }
+        }
+        else {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка: введено не число. Попробуйте снова.\n";
+        }
+    }
 
     int failingStudents = FailingStudents(students, course);
     cout << "Количество неуспевающих студентов на курсе " << course << " : " << failingStudents << endl;
@@ -125,13 +205,20 @@ int main() {
     setlocale(LC_ALL, "Russian");
     cout << "Номера задач: \n";
     cout << "Выход из программы - 0 \n";
-    cout << "Задача 1 - 1\n";
-    cout << "Задача 2 - 2\n";
+    cout << "Задача 1 - 1 \n";
+    cout << "Задача 2 - 2 \n";
 
     while (true) {
         short int n;
         cout << "Введите номер задачи: ";
         cin >> n;
+
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка, введите целое число." << endl;
+            continue;
+        }
 
         switch (n) {
         case 0: {
