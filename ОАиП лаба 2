@@ -4,64 +4,42 @@
 
 using namespace std;
 
-struct fraction {
-    int num; // числитель
-    int den; // знаменатель
+struct complex {
+    float re; // действительная часть
+    float im; // мнимая часть
 };
-fraction input() {
-    fraction f;
-    while (true) {
-        cout << "Введите числитель: ";
-        cin >> f.num;
-        if (cin.fail()) {
-            cin.clear(); // очищаем флаги ошибок
-            cin.ignore(INT_MAX, '\n'); // игнорируем оставшиеся символы до конца строки
-            cout << "Ошибка, введите целое число." << endl;
-        }
-        else {
-            break;
-        }
-    }
-    while (true) {
-        cout << "Введите знаменатель: ";
-        cin >> f.den;
-        if (cin.fail() || f.den == 0) {
-            cin.clear();
-            cin.ignore(INT_MAX, '\n');
-            cout << "Ошибка, введите целое число, отличное от нуля." << endl;
-        }
-        else {
-            break;
-        }
-    }
-    return f;
+complex input() {
+    complex c;
+    cout << "Введите действительную часть (A): ";
+    cin >> c.re;
+    cout << "Введите мнимую часть (B): ";
+    cin >> c.im;
+    return c;
 }
-int nod(int a, int b) {
-    while (b != 0) {
-        int temp = b;
-        b = a % b;
-        a = temp;
-    }
-    return a;
+void print(complex c) {
+    cout << c.re;
+    if (c.im >= 0)
+        cout << " + " << c.im << "i" << endl;
+    else
+        cout << " - " << -c.im << "i" << endl;
 }
-fraction Short(fraction f) {
-    int NOD = nod(f.num, f.den);
-    f.num /= NOD;
-    f.den /= NOD;
-    return f;
-}
-fraction add(fraction a, fraction b) {
-    fraction result;
-    result.num = a.num * b.den + b.num * a.den;
-    result.den = a.den * b.den;
-    return Short(result);
+complex add(complex a, complex b) {
+    complex result;
+    result.re = a.re + b.re;
+    result.im = a.im + b.im;
+    return result;
 }
 void ex1() {
-    fraction f1 = input();
-    fraction f2 = input();
-    fraction sum = add(f1, f2);
-    cout << "Сумма дробей: ";
-    cout << sum.num << "/" << sum.den << endl;
+    cout << "Введите первое комплексное число (A + Bi):" << endl;
+    complex num1 = input();
+
+    cout << "Введите второе комплексное число (A + Bi):" << endl;
+    complex num2 = input();
+
+    complex sum = add(num1, num2);
+
+    cout << "Сумма двух комплексных чисел: ";
+    print(sum);
 }
 
 struct Student {
@@ -80,7 +58,7 @@ void inputStudent(Student& student) {
         cout << "Введите возраст: ";
         if (cin >> student.age) {
             if (student.age >= 17 && student.age <= 100) {
-                isAGE = true; 
+                isAGE = true;
             }
             else {
                 cout << "Ошибка: возраст должен быть больше 17 и меньше 100. \n";
@@ -131,18 +109,17 @@ void inputStudent(Student& student) {
         }
     }
 }
-int FailingStudents(const vector<Student>& students, int course) {
+int BestStudents(const vector<Student>& students, int course) {
     int count = 0;
     for (const auto& student : students) {
         if (student.course == course) {
-            bool isFailing = false;
+            int count1 = 0; // обнуляем для каждого студента
             for (int i = 0; i < 3; i++) {
-                if (student.grades[i] < 4) {
-                    isFailing = true;
-                    break;
+                if (student.grades[i] > 8) {
+                    count1++;
                 }
             }
-            if (isFailing) {
+            if (count1 == 3) { // проверяем, является ли студент лучшим
                 count++;
             }
         }
@@ -197,12 +174,12 @@ void ex2() {
         }
     }
 
-    int failingStudents = FailingStudents(students, course);
-    cout << "Количество неуспевающих студентов на курсе " << course << " : " << failingStudents << endl;
+    int bestStudents = BestStudents(students, course);
+    cout << "Количество неуспевающих студентов на курсе " << course << " : " << bestStudents << endl;
 }
 
 int main() {
-    setlocale(LC_ALL, "Russian");
+    setlocale(LC_ALL, "RU");
     cout << "Номера задач: \n";
     cout << "Выход из программы - 0 \n";
     cout << "Задача 1 - 1 \n";
