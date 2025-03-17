@@ -1,0 +1,276 @@
+#include <iostream>
+#include <vector>
+#include <string>
+using namespace std;
+
+// Функция для печати массива целых чисел
+void printArray(const vector<int>& arr) {
+    for (int num : arr) {
+        cout << num << " ";
+    }
+    cout << endl;
+}
+
+// Функция для печати массива символов
+void printArray(const vector<char>& arr) {
+    for (char ch : arr) {
+        cout << ch << " ";
+    }
+    cout << endl;
+}
+
+// Сортировка включением
+template <typename T>
+void insertionSort(vector<T>& arr, int& comparisons, int& swaps) {
+    int n = arr.size();
+    for (int i = 1; i < n; i++) {
+        T key = arr[i];
+        int j = i - 1;
+        comparisons++;
+        while (j >= 0 && arr[j] > key) {
+            comparisons++;
+            arr[j + 1] = arr[j];
+            j--;
+            swaps++;
+        }
+        arr[j + 1] = key;
+        if (j == -1) comparisons--;
+    }
+}
+
+// Сортировка выбором
+template <typename T>
+void selectionSort(vector<T>& arr, int& comparisons, int& swaps) {
+    int n = arr.size();
+    for (int i = 0; i < n - 1; i++) {
+        int minIndex = i;
+        for (int j = i + 1; j < n; j++) {
+            comparisons++;
+            if (arr[j] < arr[minIndex]) {
+                minIndex = j;
+            }
+        }
+        if (minIndex != i) {
+            swap(arr[i], arr[minIndex]);
+            swaps++;
+        }
+    }
+}
+
+// Шейкерная сортировка
+template <typename T>
+void shakerSort(vector<T>& arr, int& comparisons, int& swaps) {
+    int n = arr.size();
+    bool swapped = true;
+    int left = 0;
+    int right = n - 1;
+    while (swapped) {
+        swapped = false;
+        for (int i = left; i < right; i++) {
+            comparisons++;
+            if (arr[i] > arr[i + 1]) {
+                swap(arr[i], arr[i + 1]);
+                swaps++;
+                swapped = true;
+            }
+        }
+        if (!swapped) break;
+        swapped = false;
+        right--;
+        for (int i = right; i > left; i--) {
+            comparisons++;
+            if (arr[i] < arr[i - 1]) {
+                swap(arr[i], arr[i - 1]);
+                swaps++;
+                swapped = true;
+            }
+        }
+        left++;
+    }
+}
+
+// Пирамидальная сортировка
+template <typename T>
+void heapify(vector<T>& arr, int n, int i, int& comparisons, int& swaps) {
+    int largest = i;
+    int l = 2 * i + 1;
+    int r = 2 * i + 2;
+
+    if (l < n) {
+        comparisons++;
+        if (arr[l] > arr[largest]) {
+            largest = l;
+        }
+    }
+
+    if (r < n) {
+        comparisons++;
+        if (arr[r] > arr[largest]) {
+            largest = r;
+        }
+    }
+
+    if (largest != i) {
+        swap(arr[i], arr[largest]);
+        swaps++;
+        heapify(arr, n, largest, comparisons, swaps);
+    }
+}
+
+template <typename T>
+void heapSort(vector<T>& arr, int& comparisons, int& swaps) {
+    int n = arr.size();
+    for (int i = n / 2 - 1; i >= 0; i--) {
+        heapify(arr, n, i, comparisons, swaps);
+    }
+    for (int i = n - 1; i > 0; i--) {
+        swap(arr[0], arr[i]);
+        swaps++;
+        heapify(arr, i, 0, comparisons, swaps);
+    }
+}
+
+int main() {
+    setlocale(LC_ALL, "RU");
+    int n;
+    cout << "Введите количество элементов в массиве: ";
+    cin >> n;
+
+    if (n <= 0) {
+        cout << "Количество элементов должно быть положительным числом." << endl;
+        return 1;
+    }
+
+    int typeChoice;
+    cout << "\nВыберите тип данных массива:\n";
+    cout << "1. int\n";
+    cout << "2. char\n";
+    cout << "Ваш выбор: ";
+    cin >> typeChoice;
+
+    int comparisons = 0, swaps = 0;
+
+    switch (typeChoice) {
+    case 1: {
+        vector<int> arr(n);
+        cout << "Введите элементы массива: ";
+        for (int i = 0; i < n; i++) {
+            cin >> arr[i];
+        }
+
+        vector<int> originalArr = arr;
+        int sortChoice;
+
+        do {
+            cout << "\nВыберите тип сортировки:\n";
+            cout << "0. Выход\n";
+            cout << "1. Сортировка включением\n";
+            cout << "2. Сортировка выбором\n";
+            cout << "3. Шейкерная сортировка\n";
+            cout << "4. Пирамидальная сортировка\n";
+            cout << "Ваш выбор: ";
+            cin >> sortChoice;
+
+            if (sortChoice == 0) {
+                cout << "Выход из программы.\n";
+                break;
+            }
+
+            comparisons = 0;
+            swaps = 0;
+            arr = originalArr; // Восстанавливаем исходный массив
+
+            switch (sortChoice) {
+            case 1:
+                insertionSort(arr, comparisons, swaps);
+                break;
+            case 2:
+                selectionSort(arr, comparisons, swaps);
+                break;
+            case 3:
+                shakerSort(arr, comparisons, swaps);
+                break;
+            case 4:
+                heapSort(arr, comparisons, swaps);
+                break;
+            default:
+                cout << "Неверный выбор типа сортировки." << endl;
+                continue;
+            }
+
+            cout << "\nИсходный массив: ";
+            printArray(originalArr);
+            cout << "Отсортированный массив: ";
+            printArray(arr);
+            cout << "Количество сравнений: " << comparisons << "\n";
+            cout << "Количество перестановок: " << swaps << "\n";
+
+        } while (sortChoice != 0);
+
+        break;
+    }
+    case 2: {
+        vector<char> arr(n);
+        cout << "Введите элементы массива: ";
+        for (int i = 0; i < n; i++) {
+            cin >> arr[i];
+        }
+
+        vector<char> originalArr = arr;
+        int sortChoice;
+
+        do {
+            cout << "\nВыберите тип сортировки:\n";
+            cout << "0. Выход\n";
+            cout << "1. Сортировка включением\n";
+            cout << "2. Сортировка выбором\n";
+            cout << "3. Шейкерная сортировка\n";
+            cout << "4. Пирамидальная сортировка\n";
+            cout << "Ваш выбор: ";
+            cin >> sortChoice;
+
+            if (sortChoice == 0) {
+                cout << "Выход из программы.\n";
+                break;
+            }
+
+            comparisons = 0;
+            swaps = 0;
+            arr = originalArr; // Восстанавливаем исходный массив
+
+            switch (sortChoice) {
+            case 1:
+                insertionSort(arr, comparisons, swaps);
+                break;
+            case 2:
+                selectionSort(arr, comparisons, swaps);
+                break;
+            case 3:
+                shakerSort(arr, comparisons, swaps);
+                break;
+            case 4:
+                heapSort(arr, comparisons, swaps);
+                break;
+            default:
+                cout << "Неверный выбор типа сортировки." << endl;
+                continue;
+            }
+
+            cout << "\nИсходный массив: ";
+            printArray(originalArr);
+            cout << "Отсортированный массив: ";
+            printArray(arr);
+            cout << "Количество сравнений: " << comparisons << "\n";
+            cout << "Количество перестановок: " << swaps << "\n";
+
+        } while (sortChoice != 0);
+
+        break;
+    }
+    default:
+        cout << "Неверный выбор типа данных." << endl;
+        return 1;
+    }
+
+    return 0;
+}
