@@ -16,18 +16,18 @@ complex input() {
     cin >> c.im;
     return c;
 }
-void print(complex c) {
-    cout << c.re;
-    if (c.im >= 0)
-        cout << " + " << c.im << "i" << endl;
-    else
-        cout << " - " << -c.im << "i" << endl;
-}
 complex add(complex a, complex b) {
     complex result;
     result.re = a.re + b.re;
     result.im = a.im + b.im;
     return result;
+}
+void print(complex c) {
+    cout << c.re;
+    if (c.im >= 0)
+        cout << " + " << c.im << "i" << endl;
+    else
+        cout << " - " << abs(c.im) << "i" << endl;
 }
 void ex1() {
     cout << "Введите первое комплексное число (A + Bi):" << endl;
