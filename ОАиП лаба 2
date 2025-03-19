@@ -10,10 +10,27 @@ struct complex {
 };
 complex input() {
     complex c;
-    cout << "Введите действительную часть (A): ";
-    cin >> c.re;
-    cout << "Введите мнимую часть (B): ";
-    cin >> c.im;
+    while (true) {
+        cout << "Введите действительную часть (A): ";
+        if (cin >> c.re) {
+            cout << "Введите мнимую часть (B): ";
+            if (cin >> c.im) {
+                break;
+            }
+            else {
+                cin.clear();
+                cin.ignore(INT_MAX, '\n');
+                cout << "Ошибка, введите число." << endl;
+                continue;
+            }
+        }
+        else {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка, введите число." << endl;
+            continue;
+        }
+    }
     return c;
 }
 complex add(complex a, complex b) {
@@ -46,19 +63,18 @@ struct Student {
     string fio; // ФИО
     int age; // возраст
     int course; // курс
-    int grades[3]; // успеваемость
+    int grades[3]; // оценки
 };
 void inputStudent(Student& student) {
     cout << "Введите ФИО: ";
+    cin.clear();
     cin.ignore();
     getline(cin, student.fio);
-
-    bool isAGE = false;
-    while (!isAGE) {
+    while (true) {
         cout << "Введите возраст: ";
         if (cin >> student.age) {
             if (student.age >= 17 && student.age <= 100) {
-                isAGE = true;
+                break;
             }
             else {
                 cout << "Ошибка: возраст должен быть больше 17 и меньше 100. \n";
@@ -71,12 +87,11 @@ void inputStudent(Student& student) {
         }
     }
 
-    bool isCOURSE = false;
-    while (!isCOURSE) {
+    while (true) {
         cout << "Введите номер курса (1-6) для проверки: ";
         if (cin >> student.course) {
             if (student.course >= 1 && student.course <= 6) {
-                isCOURSE = true; // выходим из цикла
+                break;
             }
             else {
                 cout << "Ошибка: номер курса должен быть от 1 до 6. \n";
@@ -91,11 +106,10 @@ void inputStudent(Student& student) {
 
     cout << "Введите оценки по 3 предметам: ";
     for (int i = 0; i < 3; i++) {
-        bool isGRADES = false;
-        while (!isGRADES) {
+        while (true) {
             if (cin >> student.grades[i]) {
                 if (student.grades[i] >= 1 && student.grades[i] <= 10) {
-                    isGRADES = true; // выходим из цикла
+                    break;
                 }
                 else {
                     cout << "Ошибка: оценки должны быть от 1 до 10. \n";
@@ -134,7 +148,7 @@ void ex2() {
         cout << "Введите количество студентов: ";
         if (cin >> n) {
             if (n >= 1) {
-                isCOUNT = true; // выходим из цикла
+                isCOUNT = true;
             }
             else {
                 cout << "Ошибка: количество студентов должно быть больше 1. \n";
@@ -180,10 +194,9 @@ void ex2() {
 
 int main() {
     setlocale(LC_ALL, "RU");
-    cout << "Номера задач: \n";
-    cout << "Выход из программы - 0 \n";
-    cout << "Задача 1 - 1 \n";
-    cout << "Задача 2 - 2 \n";
+    cout << "0. Выход из программы \n";
+    cout << "1. Задача 1 \n";
+    cout << "2. Задача 2 \n\n";
 
     while (true) {
         short int n;
@@ -216,6 +229,5 @@ int main() {
         }
         }
     }
-
     return 0;
 }
