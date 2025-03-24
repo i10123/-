@@ -30,6 +30,7 @@ start:
     ; (4596 – 589) / X + (Y * 2385)
     add bx, ax
     mov f, bx
+
     mov ax, 4C00h
     int 21h
 end start
