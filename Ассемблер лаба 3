@@ -1,1 +1,36 @@
+masm
+.model small
+.stack 1000h
+.data
 
+x dw 4007
+y db 2
+f dw ?
+
+.code
+start:
+    mov ax, @data
+    mov ds, ax
+
+    ; (4596 – 589)
+    mov ax, 4596
+    sub ax, 589
+
+    ; (4596 – 589) / X
+    mov bx, x
+    div bx
+    mov bx, ax
+
+    ; (Y * 2385)
+    mov al, y
+    cbw
+    mov cx, 2385
+    mul cx
+
+    ; (4596 – 589) / X + (Y * 2385)
+    add bx, ax
+    mov f, bx
+
+    mov ax, 4C00h
+    int 21h
+end start
