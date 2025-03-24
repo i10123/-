@@ -1,1 +1,106 @@
+.model small
+.stack 1000h
+.386
 
+.data
+    X dw ?   
+    Y dw ?      
+    F dw ?         
+    msgX db 'Input X: $'
+    msgY db 'Input Y: $'
+    msgExample db 'Primer: F = (4596 - 589) / X + (Y * 2385)$'
+
+.code
+start:
+    mov ax, @data
+    mov ds, ax
+
+    ; Ввод X
+    mov dx, offset msgX ; Загружаем адрес строки "Input X: " в DX
+    mov ah, 09h         ; Функция 09h - вывод строки
+    int 21h
+
+    xor cx, cx          ; Обнуляем CX для хранения вводимого числа X
+InputX:
+    mov ah, 01h         ; Функция 01h - ввод символа
+    int 21h
+    cmp al, 0dh         ; Сравниваем с кодом Enter (0Dh)
+    je EndInputX        ; Если Enter, заканчиваем ввод
+    sub al, 30h         ; ASCII -> число
+    cbw
+    xchg ax, cx         ; Меняем AX и CX местами (текущее число в AX, новое в CX)
+    mov bx, 10          ; Загружаем множитель 10 в BX
+    mul bx              ; Умножаем AX на 10 (сдвигаем число на разряд влево)
+    add cx, ax          ; Добавляем новую цифру к числу
+    jmp InputX          ; Повторяем ввод
+EndInputX:
+    mov X, cx           ; Сохраняем введенное значение X в переменную
+
+    ; Ввод Y
+    mov dx, offset msgY
+    mov ah, 09h
+    int 21h
+
+    xor cx, cx
+InputY:
+    mov ah, 01h
+    int 21h
+    cmp al, 0dh
+    je EndInputY
+    sub al, 30h
+    cbw
+    xchg ax, cx
+    mov bx, 10
+    mul bx
+    add cx, ax
+    jmp InputY
+EndInputY:
+    mov Y, cx
+
+    ; F = (4596 - 589) / X + (Y * 2385)
+    mov ax, 4596
+    sub ax, 589
+    div X
+    mov bx, ax
+    mov ax, Y
+    mov cx, 2385
+    mul cx
+    add bx, ax
+    mov word ptr F, bx
+
+    ; Вывод примера формулы
+    mov dx, offset msgExample 
+    mov ah, 09h
+    int 21h
+
+    ; Преобразование числа F в строку и вывод
+    mov ax, word ptr F  ; Загружаем значение F в AX
+    xor cx, cx          ; Обнуляем CX (будет использоваться как счетчик цифр)
+    mov bx, 10          ; Загружаем делитель 10 в BX
+
+ConvertLoop:
+    xor dx, dx          ; Обнуляем DX для деления
+    div bx              ; Делим AX на 10 (остаток в DX)
+    push dx             ; Сохраняем остаток (цифру) в стек
+    inc cx              ; Увеличиваем счетчик цифр
+    test ax, ax         ; Проверяем, AX == 0?
+    jnz ConvertLoop     ; Если не ноль, продолжаем цикл
+
+    ; Вывод символа новой строки
+    mov ah, 02h         ; Функция 02h - вывод символа
+    mov dl, 0dh         ; Символ возврата каретки
+    int 21h
+    mov dl, 0ah         ; Символ перевода строки
+    int 21h
+
+PrintLoop:
+    pop dx              ; Извлекаем цифру из стека
+    add dl, 30h         ; число -> ASCII
+    mov ah, 02h         ; вывод символа
+    int 21h
+    loop PrintLoop      ; Повторяем для всех цифр (пока CX != 0)
+
+    mov ax, 4C00h
+    int 21h
+
+end start
