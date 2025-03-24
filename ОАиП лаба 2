@@ -5,7 +5,7 @@
 using namespace std;
 
 struct complex {
-    float re; // действительная часть
+    float re; // действительная часть ъ
     float im; // мнимая часть
 };
 complex input() {
