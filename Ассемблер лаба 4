@@ -1,3 +1,4 @@
+; 16-битный вывод
 .model small
 .stack 1000h
 .386
@@ -99,6 +100,122 @@ PrintLoop:
     mov ah, 02h         ; вывод символа
     int 21h
     loop PrintLoop      ; Повторяем для всех цифр (пока CX != 0)
+
+    mov ax, 4C00h
+    int 21h
+
+end start
+;32-битный вывод
+.model small
+.stack 1000h
+.386
+
+.data
+    X           dw ?   
+    Y           dw ?      
+    F           dd ?            ; 32-битное значение результата
+    msgX        db 'Input X: $'
+    msgY        db 'Input Y: $'
+    msgExample  db 'Primer: F = (4596 - 589) / X + (Y * 2385) = $'
+    ; Буфер для строки: максимум 10 цифр + символ '$'
+    resultBuffer db 12 dup(?)
+
+.code
+start:
+    mov ax, @data
+    mov ds, ax
+
+    ; Ввод X
+    mov dx, offset msgX
+    mov ah, 09h
+    int 21h
+
+    xor cx, cx
+InputX:
+    mov ah, 01h
+    int 21h
+    cmp al, 0dh           ; Enter?
+    je EndInputX
+    sub al, 30h           ; преобразуем ASCII -> число
+    cbw
+    xchg ax, cx           ; сохраняем ранее накопленное число в AX, а текущая цифра попадает в CX
+    mov bx, 10
+    mul bx                ; умножаем AX на 10
+    add cx, ax            ; суммируем с предыдущим результатом
+    jmp InputX
+EndInputX:
+    mov X, cx
+
+    ; Ввод Y
+    mov dx, offset msgY
+    mov ah, 09h
+    int 21h
+
+    xor cx, cx
+InputY:
+    mov ah, 01h
+    int 21h
+    cmp al, 0dh
+    je EndInputY
+    sub al, 30h
+    cbw
+    xchg ax, cx
+    mov bx, 10
+    mul bx
+    add cx, ax
+    jmp InputY
+EndInputY:
+    mov Y, cx
+
+    ; F = (4596 - 589) / X + (Y * 2385)
+    mov ax, 4596
+    sub ax, 589         ; ax = 4007
+    xor dx, dx
+    div word ptr X      ; DX:AX / X (результат в AX)
+    mov bx, ax          ; сохраняем результат деления в BX
+    mov ax, Y
+    mov cx, 2385
+    mul cx              ; AX * CX -> результат в DX:AX
+    add ax, bx          ; прибавляем нижнее слово первой части
+    adc dx, 0           ; учитываем перенос – F теперь 32-битное число
+    mov word ptr F, ax
+    mov word ptr F+2, dx
+
+    ; Вывод примера с описанием формулы и результатом
+    mov dx, offset msgExample
+    mov ah, 09h
+    int 21h
+
+    ; Преобразование 32-битного числа F в строку
+    ; Организуем буфер для строки: resultBuffer[0..10] – цифры, resultBuffer[11] – символ '$'
+    mov bx, offset resultBuffer
+    add bx, 10                   ; BX указывает на последнюю позицию для цифры
+    mov byte ptr [offset resultBuffer+11], '$' ; размещаем терминатор
+
+    ; Загружаем число F (32 бита) в EAX
+    mov eax, dword ptr F
+    cmp eax, 0
+    jne conv_loop
+    ; Если F равен 0, записываем '0'
+    mov byte ptr [bx], '0'
+    jmp print_result
+
+conv_loop:
+fill_loop:
+    xor edx, edx       ; обнуляем EDX перед делением
+    mov ecx, 10        ; делитель 10
+    div ecx            ; делим EDX:EAX на 10: quotient в EAX, остаток в EDX
+    add dl, '0'        ; преобразуем остаток в символ
+    mov [bx], dl       ; сохраняем символ в буфер
+    dec bx            ; сдвигаемся назад по буферу
+    cmp eax, 0
+    jne fill_loop
+    inc bx            ; BX теперь указывает на первый символ числа
+
+print_result:
+    mov dx, bx        ; DX указывает на начало строки с цифрами
+    mov ah, 09h
+    int 21h
 
     mov ax, 4C00h
     int 21h
