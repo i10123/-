@@ -72,9 +72,7 @@ void shakerSort(vector<T>& arr, int& comparisons, int& swaps) {
         left++;
     }
 }
-
-// Пирамидальная сортировка
-template <typename T>
+template <typename T> // Пирамидальная сортировка (Менее эффективна для небольших массивов)
 void heapify(vector<T>& arr, int n, int i, int& comparisons, int& swaps) {
     int largest = i;
     int l = 2 * i + 1;
@@ -112,7 +110,6 @@ void heapSort(vector<T>& arr, int& comparisons, int& swaps) {
         heapify(arr, i, 0, comparisons, swaps);
     }
 }
-
 template <typename T> // печать массива
 void printArray(const vector<T>& arr) {
     for (const T& i : arr) {
