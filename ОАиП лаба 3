@@ -1,1 +1,213 @@
+#include <iostream>
+#include <iomanip>
+#include <windows.h>
+#include <string>
+#include <vector>
+#include <algorithm>
+using namespace std;
 
+struct AEROFLOT {
+    int flightNumber; // номер рейса
+    string departure; // место отправления
+    string destination; // место назначения
+    string planeType; // тип самолета
+    double flightTime; // время полета
+    double ticketPrice; // цена билета
+
+    AEROFLOT() : flightNumber(0), departure(""), destination(""), planeType(""), flightTime(0.0), ticketPrice(0.0) {}
+    AEROFLOT(int num, string dep, string dest, string type, double time, double price)
+        : flightNumber(num), departure(dep), destination(dest), planeType(type), flightTime(time), ticketPrice(price) {
+    }
+
+    void print() const {
+        cout << left;
+        cout << setw(10) << flightNumber << setw(20) << departure << setw(20) << destination
+        << setw(12) << planeType << setw(10) << flightTime << setw(10) << ticketPrice << endl;
+    }
+};
+bool error() {
+    if (cin.fail()) {
+        cin.clear();
+        cin.ignore(INT_MAX, '\n');
+        return false;
+    }
+    return true;
+}
+void inputFlight(vector<AEROFLOT>& flights, int n) {
+    for (int i = 0; i < n; i++) {
+        int num;
+        string dep, dest, type;
+        double time, price;
+
+        cout << "Введите данные для рейса " << i + 1 << ":\n";
+        while (true) {
+            cout << "Номер рейса: ";
+            cin >> num;
+            if (error() && num > 0) break;
+        }
+        cin.ignore();
+        cout << "Пункт вылета: ";
+        getline(cin, dep);
+        cout << "Пункт назначения: ";
+        getline(cin, dest);
+        cout << "Тип самолета: ";
+        getline(cin, type);
+        while (true) {
+            cout << "Время в пути (в часах): ";
+            cin >> time;
+            if (error() && time > 0) break;
+        }
+        while (true) {
+            cout << "Цена билета: ";
+            cin >> price;
+            if (error() && price > 0) break;
+        }
+        cout << endl;
+        flights.emplace_back(num, dep, dest, type, time, price);
+    }
+}
+void printFlights(const vector<AEROFLOT>& flights) {
+    cout << left;
+    cout << setw(10) << "Номер" << setw(20) << "Вылет" << setw(20) << "Назначение" 
+        << setw(12) << "Самолет" << setw(10) << "Время" << setw(10) << "Цена" << endl;
+    for (const auto& flight : flights) { 
+        flight.print(); 
+    }
+    cout << endl;
+}
+void searchDestination(const vector<AEROFLOT>& flights, const string& destination) {
+    bool found = false;
+    for (const auto& flight : flights) {
+        if (flight.destination == destination) {
+            cout << left;
+            cout << setw(10) << "Номер" << setw(20) << "Вылет" << setw(20) << "Назначение"
+                << setw(12) << "Самолет" << setw(10) << "Время" << setw(10) << "Цена" << endl;
+            flight.print();
+            found = true;
+        }
+    }
+    if (!found) {
+        cout << "Рейсы с пунктом назначения \"" << destination << "\" не найдены.\n";
+    }
+    cout << endl;
+}
+
+void sortByPrice(vector<AEROFLOT>& flights) {
+    sort(flights.begin(), flights.end(), [](const AEROFLOT& a, const AEROFLOT& b) {
+        return a.ticketPrice < b.ticketPrice;
+        });
+    cout << "Рейсы отсортированы по цене.\n";
+}
+
+void sortByDestination(vector<AEROFLOT>& flights) {
+    sort(flights.begin(), flights.end(), [](const AEROFLOT& a, const AEROFLOT& b) {
+        return a.destination < b.destination;
+        });
+    cout << "Рейсы отсортированы по пункту назначения.\n";
+}
+
+void editFlight(vector<AEROFLOT>& flights, int flightNumber) {
+    for (auto& flight : flights) {
+        if (flight.flightNumber == flightNumber) {
+            string dep, dest, type;
+            double time, price;
+
+            cout << "Введите новый пункт вылета: ";
+            cin.ignore();
+            getline(cin, dep);
+            cout << "Введите новый пункт назначения: ";
+            getline(cin, dest);
+            cout << "Введите новый тип самолета: ";
+            getline(cin, type);
+            cout << "Введите новое время в пути (в часах): ";
+            cin >> time;
+            cout << "Введите новую цену билета: ";
+            cin >> price;
+
+            flight.departure = dep;
+            flight.destination = dest;
+            flight.planeType = type;
+            flight.flightTime = time;
+            flight.ticketPrice = price;
+            cout << "Информация о рейсе обновлена.\n";
+            return;
+        }
+    }
+    cout << "Рейс с номером " << flightNumber << " не найден.\n";
+}
+
+void Program() {
+    vector<AEROFLOT> flights;
+    int choice;
+
+    while (true) {
+        cout << "    Меню:\n";
+        cout << " 1. Ввести данные о рейсах\n";
+        cout << " 2. Вывести информацию о рейсах\n";
+        cout << " 3. Найти рейс по пункту назначения\n";
+        cout << " 4. Отсортировать рейсы по цене\n";
+        cout << " 5. Отсортировать рейсы по пункту назначения\n";
+        cout << " 6. Редактировать рейс\n";
+        cout << " 0. Выход\n";
+        cout << " Выберите действие: ";
+        cin >> choice;
+
+        if (!error()) continue;
+
+        switch (choice) {
+        case 0:
+            cout << "Выход из программы.\n";
+            return;
+        case 1: {
+            int n;
+            while (true) {
+                cout << "Введите количество рейсов: ";
+                cin >> n;
+                if (error() && n > 0) break;
+            }
+            cout << endl;
+            inputFlight(flights, n);
+            break;
+        }
+        case 2:
+            printFlights(flights);
+            break;
+        case 3: {
+            string dest;
+            cout << "Введите пункт назначения: ";
+            cin.ignore();
+            getline(cin, dest);
+            searchDestination(flights, dest);
+            break;
+        }
+        case 4:
+            sortByPrice(flights);
+            break;
+
+        case 5:
+            sortByDestination(flights);
+            break;
+
+        case 6: {
+            int flightNumber;
+            cout << "Введите номер рейса для редактирования: ";
+            cin >> flightNumber;
+            editFlight(flights, flightNumber);
+            break;
+        }
+        default:
+            cout << "Ошибка. Попробуйте снова.\n";
+            break;
+        }
+    }
+}
+
+int main() {
+    setlocale(LC_ALL, "RU");
+    SetConsoleCP(1251);
+    SetConsoleOutputCP(1251);
+
+    Program();
+
+    return 0;
+}
