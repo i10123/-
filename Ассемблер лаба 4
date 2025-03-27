@@ -1,4 +1,4 @@
-; 16-битный вывод
+// БЕЗ ЗНАКА
 masm
 .model small
 .stack 1000h
@@ -17,28 +17,35 @@ start:
     mov ax, @data
     mov ds, ax
 
-    ; Ввод X
-    mov dx, offset msgX ; Загружаем адрес строки "Input X: " в DX
-    mov ah, 09h         ; Функция 09h - вывод строки
+    mov dx, offset msgExample
+    mov ah, 09h
+    int 21h
+    mov ah, 02h
+    mov dl, 0dh
+    int 21h
+    mov dl, 0ah
     int 21h
 
-    xor cx, cx          ; Обнуляем CX для хранения вводимого числа X
+    mov dx, offset msgX
+    mov ah, 09h
+    int 21h
+
+    xor cx, cx
 InputX:
-    mov ah, 01h         ; Функция 01h - ввод символа
+    mov ah, 01h
     int 21h
-    cmp al, 0dh         ; Сравниваем с кодом Enter (0Dh)
-    je EndInputX        ; Если Enter, заканчиваем ввод
-    sub al, 30h         ; ASCII -> число
+    cmp al, 0dh
+    je EndInputX
+    sub al, 30h
     cbw
-    xchg ax, cx         ; Меняем AX и CX местами (текущее число в AX, новое в CX)
-    mov bx, 10          ; Загружаем множитель 10 в BX
-    mul bx              ; Умножаем AX на 10 (сдвигаем число на разряд влево)
-    add cx, ax          ; Добавляем новую цифру к числу
-    jmp InputX          ; Повторяем ввод
+    xchg ax, cx
+    mov bx, 10
+    mul bx
+    add cx, ax
+    jmp InputX
 EndInputX:
-    mov X, cx           ; Сохраняем введенное значение X в переменную
+    mov X, cx
 
-    ; Ввод Y
     mov dx, offset msgY
     mov ah, 09h
     int 21h
@@ -70,162 +77,189 @@ EndInputY:
     add bx, ax
     mov word ptr F, bx
 
-    ; Вывод примера формулы
-    mov dx, offset msgExample 
-    mov ah, 09h
-    int 21h
-
-    ; Преобразование числа F в строку и вывод
-    mov ax, word ptr F  ; Загружаем значение F в AX
-    xor cx, cx          ; Обнуляем CX (будет использоваться как счетчик цифр)
-    mov bx, 10          ; Загружаем делитель 10 в BX
+    mov ax, word ptr F
+    xor cx, cx
+    mov bx, 10
 
 ConvertLoop:
-    xor dx, dx          ; Обнуляем DX для деления
-    div bx              ; Делим AX на 10 (остаток в DX)
-    push dx             ; Сохраняем остаток (цифру) в стек
-    inc cx              ; Увеличиваем счетчик цифр
-    test ax, ax         ; Проверяем, AX == 0?
-    jnz ConvertLoop     ; Если не ноль, продолжаем цикл
+    xor dx, dx
+    div bx
+    push dx
+    inc cx
+    test ax, ax
+    jnz ConvertLoop
 
-    ; Вывод символа новой строки
-    mov ah, 02h         ; Функция 02h - вывод символа
-    mov dl, 0dh         ; Символ возврата каретки
+    mov ah, 02h
+    mov dl, 0dh
     int 21h
-    mov dl, 0ah         ; Символ перевода строки
+    mov dl, 0ah
     int 21h
 
 PrintLoop:
-    pop dx              ; Извлекаем цифру из стека
-    add dl, 30h         ; число -> ASCII
-    mov ah, 02h         ; вывод символа
+    pop dx
+    add dl, 30h
+    mov ah, 02h
     int 21h
-    loop PrintLoop      ; Повторяем для всех цифр (пока CX != 0)
+    loop PrintLoop
 
     mov ax, 4C00h
     int 21h
 
 end start
 
+--------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-;32-битный вывод
+// СО ЗНАКОМ
 masm
-.model small
-.stack 1000h
+model small
 .386
+.stack 400h
 
 .data
+    sign db ?
     X dw ?
     Y dw ?
-    F dd ?
+    F dw ?
     msgX db 'Input X: $'
     msgY db 'Input Y: $'
-    msgExample db 'Primer: F = (4596 - 589) / X + (Y * 2385) $'
-    resultBuffer db 12 dup(?)
-
+    msgExample db 'Primer: F = (4596 - 589) / X + (Y * 2385)$'
 .code
+
 start:
     mov ax, @data
     mov ds, ax
-
-    ; Вывод примера
+    
     mov dx, offset msgExample
     mov ah, 09h
     int 21h
-    mov dl, 13 ; перевод строки
     mov ah, 02h
+    mov dl, 0dh
     int 21h
-    mov dl, 10
+    mov dl, 0ah
     int 21h
-
-    ; Ввод X
+    
     mov dx, offset msgX
     mov ah, 09h
     int 21h
-
-    xor cx, cx
-InputX:
+    
+    mov sign, 0
+    
     mov ah, 01h
     int 21h
-    cmp al, 0dh           ; Enter?
-    je EndInputX
-    sub al, 30h           ; преобразуем ASCII -> число
-    cbw
-    xchg ax, cx           ; сохраняем ранее накопленное число в AX, а текущая цифра попадает в CX
+    cmp al, '-'
+    jne coninput1
+    mov sign, 1
+    
+    mov ah, 01h
+    int 21h
+    
+coninput1:
+    sub al, 30h
+    mov ah, 0
     mov bx, 10
-    mul bx                ; умножаем AX на 10
-    add cx, ax            ; суммируем с предыдущим результатом
-    jmp InputX
-EndInputX:
-    mov X, cx
-
-    ; Ввод Y
-    mov dx, offset msgY
-    mov ah, 09h
-    int 21h
-
-    xor cx, cx
-InputY:
+    mov cx, ax
+    
+FirstInput:
     mov ah, 01h
     int 21h
-    cmp al, 0dh
-    je EndInputY
+    cmp al, 0Dh
+    je EndFirst
     sub al, 30h
     cbw
     xchg ax, cx
-    mov bx, 10
     mul bx
     add cx, ax
-    jmp InputY
-EndInputY:
-    mov Y, cx
-
-    ; F = (4596 - 589) / X + (Y * 2385)
-    mov ax, 4596
-    sub ax, 589
-    xor dx, dx
-    div word ptr X
-    mov bx, ax
-    mov ax, Y
-    mov cx, 2385
-    mul cx
-    add ax, bx
-    adc dx, 0
-    mov word ptr F, ax
-    mov word ptr F+2, dx
-
-    ; Преобразование 32-битного числа F в строку
-    mov bx, offset resultBuffer
-    add bx, 10                   ; BX указывает на последнюю позицию для цифры
-    mov byte ptr [offset resultBuffer+11], '$' ; размещаем терминатор
-
-    ; Загружаем число F (32 бита) в EAX
-    mov eax, dword ptr F
-    cmp eax, 0
-    jne conv_loop
-    ; Если F равен 0, записываем '0'
-    mov byte ptr [bx], '0'
-    jmp print_result
-
-conv_loop:
-fill_loop:
-    xor edx, edx       ; обнуляем EDX перед делением
-    mov ecx, 10        ; делитель 10
-    div ecx            ; делим EDX:EAX на 10: quotient в EAX, остаток в EDX
-    add dl, '0'        ; преобразуем остаток в символ
-    mov [bx], dl       ; сохраняем символ в буфер
-    dec bx            ; сдвигаемся назад по буферу
-    cmp eax, 0
-    jne fill_loop
-    inc bx            ; BX теперь указывает на первый символ числа
-
-print_result:
-    mov dx, bx        ; DX указывает на начало строки с цифрами
+    jmp FirstInput
+    
+EndFirst:
+    cmp sign, 1
+    jne final1
+    neg cx
+    
+final1:
+    mov X, cx
+    
+    mov dx, offset msgY
     mov ah, 09h
     int 21h
+    
+    mov sign, 0
+    
+    mov ah, 01h
+    int 21h
+    cmp al, '-'
+    jne coninput2
+    mov sign, 1
+    
+    mov ah, 01h
+    int 21h
+    
+coninput2:
+    sub al, 30h
+    mov ah, 0
+    mov bx, 10
+    mov cx, ax
+    
+SecondInput:
+    mov ah, 01h
+    int 21h
+    cmp al, 0Dh
+    je EndSecond
+    sub al, 30h
+    cbw
+    xchg ax, cx
+    mul bx
+    add cx, ax
+    jmp SecondInput
+    
+EndSecond:
+    cmp sign, 1
+    jne final2
+    neg cx
+    
+final2:
+    mov Y, cx
+    
+    mov ax, 4596
+    sub ax, 589
+    cwd
+    idiv X
+    mov bx, ax
+    
+    mov ax, Y
+    imul ax, 2385
+    add bx, ax
+    mov F, bx
 
+    mov ax, F
+    cmp ax, 0
+    jnl Positive
+    push ax
+    mov dl, '-'
+    mov ah, 02h
+    int 21h
+    pop ax
+    neg ax
+    
+Positive:
+    xor cx, cx
+    mov bx, 10
+    
+ConvertLoop:
+    xor dx, dx
+    div bx
+    push dx
+    inc cx
+    test ax, ax
+    jnz ConvertLoop
+    
+PrintLoop:
+    pop dx
+    add dl, '0'
+    mov ah, 02h
+    int 21h
+    loop PrintLoop
+    
     mov ax, 4C00h
     int 21h
-
 end start
