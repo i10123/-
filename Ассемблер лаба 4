@@ -1,4 +1,5 @@
-.model small
+masm
+model small
 .386
 .stack 400h
 
@@ -9,43 +10,43 @@
     F dw ?
     msgX db 'Input X: $'
     msgY db 'Input Y: $'
-    msgExample db 'Primer: F = (4596 - 589) / X + (Y * 2385)',13,10,'$'
+    msgExample db 'Primer: F = (4596 - 589) / X + (Y * 2385)',10, 13,'$'
 .code
 
-InputSignNumber proc
+InputNumber proc
     mov sign, 0
+    
     mov ah, 01h
     int 21h
     cmp al, '-'
-    jne InputNumber
+    jne coninput
     mov sign, 1
+    
     mov ah, 01h
     int 21h
-    
-InputNumber:
+coninput:
     sub al, 30h
     mov ah, 0
     mov bx, 10
     mov cx, ax
-    
-InputLoop:
+Input:
     mov ah, 01h
     int 21h
     cmp al, 0Dh
-    je CheckSign
+    je EndPrint
     sub al, 30h
     cbw
     xchg ax, cx
     mul bx
     add cx, ax
-    jmp InputLoop
-    
-CheckSign:
+    jmp Input
+EndPrint:
     cmp sign, 1
-    jne ExitProc
+    jne final
     neg cx
+final:
     ret
-InputSignNumber endp
+InputNumber endp
 
 start:
     mov ax, @data
@@ -58,15 +59,15 @@ start:
     mov dx, offset msgX
     mov ah, 09h
     int 21h
-    call InputSignNumber
+    call InputNumber
     mov X, cx
     
     mov dx, offset msgY
     mov ah, 09h
     int 21h
-    call InputSignNumber
+    call InputNumber
     mov Y, cx
-    
+
     mov ax, 4596
     sub ax, 589
     cwd
@@ -77,162 +78,33 @@ start:
     add bx, ax
     mov F, bx
 
-    push 11
     mov ax, F
     cmp ax, 0
     jnl Positive
+    push ax
     mov dl, '-'
     mov ah, 02h
     int 21h
+    pop ax
     neg ax
-    
 Positive:
-    xor cx, cx
     mov bx, 10
-    
+    push -1
 ConvertLoop:
     xor dx, dx
     div bx
     push dx
-    inc cx
     test ax, ax
     jnz ConvertLoop
-    
 PrintLoop:
     pop dx
-    cmp dx, 11
+    cmp dx, -1
     je Exit
     add dl, '0'
     mov ah, 02h
     int 21h
-    loop PrintLoop
-    
+    jmp PrintLoop
 Exit:
     mov ax, 4C00h
     int 21h
 end start
----------------------------------------------------------------------------------------------------------------------------------------------------------------
-masm
-.model small
-.386
-.stack 400h
-
-.data
-    sign db ?
-    X dw ?
-    Y dw ?
-    F dw ?
-    msgX db 'Input X: $'
-    msgY db 'Input Y: $'
-    msgExample db 'Primer: F = (4596 - 589) / X + (Y * 2385)',13,10,'$'
-
-.code
-
-; Процедура ввода числа со знаком
-; Возвращает число в регистре CX
-InputSignNumber proc
-    mov sign, 0     ; Изначально предполагаем положительное число
-    mov ah, 01h     ; Функция DOS для ввода символа
-    int 21h         ; Ввод символа
-    cmp al, '-'     ; Проверка на знак минус
-    jne InputNumber ; Если не минус, переходим к вводу числа
-    mov sign, 1     ; Устанавливаем флаг отрицательного числа
-    mov ah, 01h     ; Функция DOS для ввода следующего символа
-    int 21h         ; Ввод первого цифрового символа
-    
-InputNumber:
-    sub al, 30h     ; Преобразование ASCII цифры в число
-    mov ah, 0       ; Очистка старшего байта AX
-    mov bx, 10      ; Основание системы счисления (для умножения)
-    mov cx, ax      ; Сохранение первой цифры в CX
-    
-InputLoop:
-    mov ah, 01h     ; Функция DOS для ввода символа
-    int 21h         ; Ввод следующего символа
-    cmp al, 0Dh     ; Проверка на Enter (конец ввода)
-    je CheckSign    ; Если Enter, переходим к проверке знака
-    sub al, 30h     ; Преобразование ASCII цифры в число
-    cbw             ; Расширение байта до слова (AL -> AX)
-    xchg ax, cx     ; Обмен значениями AX и CX
-    mul bx          ; Умножение AX на 10 (сдвиг разрядов)
-    add cx, ax      ; Добавление новой цифры к числу
-    jmp InputLoop   ; Повтор цикла для следующей цифры
-    
-CheckSign:
-    cmp sign, 1     ; Проверка флага знака
-    jne ExitProc    ; Если число положительное, выходим
-    neg cx          ; Иначе инвертируем число
-    
-ExitProc:
-    ret             ; Возврат из процедуры
-InputSignNumber endp
-
-start:              ; Начало основной программы
-    mov ax, @data   ; Загрузка адреса сегмента данных
-    mov ds, ax      ; Установка DS на сегмент данных
-    
-    ; Вывод примера формулы
-    mov dx, offset msgExample  ; Адрес сообщения с примером
-    mov ah, 09h     ; Функция DOS для вывода строки
-    int 21h         ; Вывод сообщения
-    
-    ; Ввод значения X
-    mov dx, offset msgX  ; Адрес сообщения для ввода X
-    mov ah, 09h     ; Функция DOS для вывода строки
-    int 21h         ; Вывод приглашения
-    call InputSignNumber ; Вызов процедуры ввода числа
-    mov X, cx       ; Сохранение введенного значения в X
-    
-    ; Ввод значения Y
-    mov dx, offset msgY  ; Адрес сообщения для ввода Y
-    mov ah, 09h     ; Функция DOS для вывода строки
-    int 21h         ; Вывод приглашения
-    call InputSignNumber ; Вызов процедуры ввода числа
-    mov Y, cx       ; Сохранение введенного значения в Y
-    
-    ; Вычисление выражения: (4596 - 589) / X + (Y * 2385)
-    mov ax, 4596    ; Загрузка первого числа
-    sub ax, 589     ; Вычитание второго числа
-    cwd             ; Расширение AX до DX:AX (для деления)
-    idiv X          ; Деление на X (знаковое)
-    mov bx, ax      ; Сохранение результата деления в BX
-    mov ax, Y       ; Загрузка Y
-    imul ax, 2385   ; Умножение Y на 2385
-    add bx, ax      ; Сложение результатов
-    mov F, bx       ; Сохранение конечного результата в F
-
-    ; Подготовка к выводу результата
-    push 11         ; Помещение маркера конца (11) в стек
-    mov ax, F       ; Загрузка результата для вывода
-    cmp ax, 0       ; Проверка знака числа
-    jnl Positive    ; Если не отрицательное, пропускаем вывод минуса
-    mov dl, '-'     ; Подготовка символа минуса
-    mov ah, 02h     ; Функция DOS для вывода символа
-    int 21h         ; Вывод минуса
-    neg ax          ; Получение модуля числа
-    
-Positive:
-    xor cx, cx      ; Обнуление счетчика цифр
-    mov bx, 10      ; Основание системы счисления
-    
-ConvertLoop:
-    xor dx, dx      ; Очистка DX для деления
-    div bx          ; Деление AX на 10 (DX:AX / BX)
-    push dx         ; Сохранение остатка (цифры) в стек
-    inc cx          ; Увеличение счетчика цифр
-    test ax, ax     ; Проверка, не ноль ли частное
-    jnz ConvertLoop ; Если не ноль, продолжаем
-    
-PrintLoop:
-    pop dx          ; Извлечение цифры из стека
-    cmp dx, 11      ; Проверка на маркер конца
-    je Exit         ; Если маркер, завершаем вывод
-    add dl, '0'     ; Преобразование цифры в ASCII
-    mov ah, 02h     ; Функция DOS для вывода символа
-    int 21h         ; Вывод цифры
-    loop PrintLoop  ; Повтор для всех цифр
-    
-Exit:
-    mov ax, 4C00h   ; Функция DOS для завершения программы
-    int 21h         ; Завершение программы
-end start          ; Конец программы
