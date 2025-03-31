@@ -1,1 +1,121 @@
+masm
+.model small
+.386
+.stack 128
 
+.data
+    sign db ?
+    msg1 db 'Input 1st num: $'
+    msg2 db 'Input 2nd num: $'
+    msg3 db 'Input 3rd num: $'
+    msgString db 'Max: $'
+.code
+
+InputNumber proc
+    mov sign, 0
+    mov ah, 01h
+    int 21h
+    cmp al, '-'
+    jne coninput
+    mov sign, 1
+    mov ah, 01h
+    int 21h
+coninput:
+    sub al, 30h
+    mov ah, 0
+    mov bl, 10
+    mov cl, al
+Input:
+    mov ah, 01h
+    int 21h
+    cmp al, 0Dh
+    je EndPrint
+    sub al, 30h
+    mov dl, al
+    mov al, cl
+    mul bl
+    add al, dl
+    mov cl, al
+    jmp Input
+EndPrint:
+    cmp sign, 1
+    jne final
+    neg cl
+final:
+    ret
+InputNumber endp
+OutputNumber proc
+    cmp ax, 0
+    jns Positive
+    push ax
+    mov dl, '-'
+    mov ah, 02h
+    int 21h
+    pop ax
+    neg ax
+Positive:
+    mov bx, 10
+    xor cx, cx
+ConvertLoop:
+    xor dx, dx
+    div bx
+    push dx
+    inc cx
+    cmp ax, 0
+    jnz ConvertLoop
+PrintLoop:
+    pop dx
+    cmp dx, 10
+    je Exit
+    add dl, '0'
+    mov ah, 02h
+    int 21h
+    loop PrintLoop
+Exit:
+    mov ax, 4C00h
+    int 21h
+OutputNumber endp
+
+start:
+    mov ax, @data
+    mov ds, ax
+    
+    mov dx, offset msg1
+    mov ah, 09h
+    int 21h
+    call InputNumber
+    push cx
+    xor cx, cx
+    
+    mov dx, offset msg2
+    mov ah, 09h
+    int 21h
+    call InputNumber
+    pop ax
+    cmp al, cl
+    jge f_max
+    mov al, cl
+f_max:
+    push ax
+    xor cx, cx
+    
+    mov dx, offset msg3
+    mov ah, 09h
+    int 21h
+    call InputNumber
+    pop ax
+    cmp al, cl
+    jge s_max
+    mov al, cl
+s_max:
+    push 4
+    push ax
+    
+    mov dx, offset msgString
+    mov ah, 09h
+    int 21h
+    
+    pop ax
+    cbw
+    call OutputNumber
+end start
