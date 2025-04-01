@@ -3,12 +3,11 @@
 #include <windows.h>
 #include <string>
 #include <vector>
-#include <algorithm>
+#include <utility>
 using namespace std;
 
 template <typename T> // Сортировка включением 
-                      // (+) небольшие или почти отсортированные данные
-                      // (-) не эффективны на больших массивах
+// (+) небольшие или почти отсортированные данные
 void insertionSort(vector<T>& arr, int& comparisons, int& swaps) {
     int n = arr.size();
     for (int i = 1; i < n; i++) {
@@ -17,7 +16,7 @@ void insertionSort(vector<T>& arr, int& comparisons, int& swaps) {
         comparisons++;
         while (j >= 0 && arr[j] > key) {
             comparisons++;
-            swap(arr[j], arr[j - 1]);
+            swap(arr[j], arr[j + 1]);
             swaps++;
             j--;
         }
@@ -26,9 +25,8 @@ void insertionSort(vector<T>& arr, int& comparisons, int& swaps) {
         }
     }
 }
-template <typename T> // Сортировка выбором (Низкая эффективность на больших массивах.
-// Число сравнений всегда остаётся высоким, даже если массив 
-// уже частично отсортирован)
+template <typename T> // Сортировка выбором 
+// (+) минимальное количество перестановок, небольшие массивы
 void selectionSort(vector<T>& arr, int& comparisons, int& swaps) {
     int n = arr.size();
     for (int i = 0; i < n - 1; i++) {
@@ -45,12 +43,13 @@ void selectionSort(vector<T>& arr, int& comparisons, int& swaps) {
         }
     }
 }
-template <typename T> // Шейкерная сортировка (Быстрее пузырьковой сортировки за
-// счёт двустороннего прохода,медленный для больших массивов)
+template <typename T> // Шейкерная сортировка 
+// (+) Если массив небольшой или почти отсортирован
 void shakerSort(vector<T>& arr, int& comparisons, int& swaps) {
     int n = arr.size();
     bool swapped = true;
     int left = 0, right = n - 1;
+    // находится максимальный элемент
     while (swapped) {
         swapped = false;
         for (int i = left; i < right; i++) {
@@ -64,6 +63,7 @@ void shakerSort(vector<T>& arr, int& comparisons, int& swaps) {
         if (!swapped) break; // Если нет перестановок, массив уже отсортирован
         swapped = false;
         right--;
+        // находится минимальный элемент
         for (int i = right; i > left; i--) {
             comparisons++;
             if (arr[i] < arr[i - 1]) {
@@ -75,8 +75,9 @@ void shakerSort(vector<T>& arr, int& comparisons, int& swaps) {
         left++;
     }
 }
-template <typename T> // Пирамидальная сортировка (Менее эффективна для небольших массивов)
-void heapify(vector<T>& arr, int n, int i, int& comparisons, int& swaps) {
+template <typename T> // Пирамидальная сортировка 
+// (+) максимально эффективна для больших объемах данных
+void heapfunc(vector<T>& arr, int n, int i, int& comparisons, int& swaps) {
     int largest = i;
     int l = 2 * i + 1;
     int r = 2 * i + 2;
@@ -87,30 +88,28 @@ void heapify(vector<T>& arr, int n, int i, int& comparisons, int& swaps) {
             largest = l;
         }
     }
-
     if (r < n) {
         comparisons++;
         if (arr[r] > arr[largest]) {
             largest = r;
         }
     }
-
     if (largest != i) {
         swap(arr[i], arr[largest]);
         swaps++;
-        heapify(arr, n, largest, comparisons, swaps);
+        heapfunc(arr, n, largest, comparisons, swaps);
     }
 }
 template <typename T>
 void heapSort(vector<T>& arr, int& comparisons, int& swaps) {
     int n = arr.size();
     for (int i = n / 2 - 1; i >= 0; i--) {
-        heapify(arr, n, i, comparisons, swaps);
+        heapfunc(arr, n, i, comparisons, swaps);
     }
     for (int i = n - 1; i > 0; i--) {
         swap(arr[0], arr[i]);
         swaps++;
-        heapify(arr, i, 0, comparisons, swaps);
+        heapfunc(arr, i, 0, comparisons, swaps);
     }
 }
 template <typename T> // печать массива
@@ -236,6 +235,5 @@ int main() {
             cout << "Ошибка. Попробуйте снова.\n";
         }
     }
-
     return 0;
 }
