@@ -1,230 +1,235 @@
 #include <iostream>
-#include <iomanip>
-#include <windows.h>
-#include <string>
 #include <vector>
-#include <algorithm>
+#include <string>
 using namespace std;
 
-struct AEROFLOT {
-    int flightNumber; // номер рейса
-    string departure; // место отправления
-    string destination; // место назначения
-    string planeType; // тип самолета
-    double flightTime; // время полета
-    double ticketPrice; // цена билета
-
-    AEROFLOT() : flightNumber(0), departure(""), destination(""), planeType(""), flightTime(0.0), ticketPrice(0.0) {}
-    AEROFLOT(int num, string dep, string dest, string type, double time, double price)
-        : flightNumber(num), departure(dep), destination(dest), planeType(type), flightTime(time), ticketPrice(price) {
-    }
-    ~AEROFLOT() {
-        cout << "Все данные о рейсах удалены." << endl;
-    }
-
-    void print() const {
-        cout << left;
-        cout << setw(10) << flightNumber << setw(20) << departure << setw(20) << destination
-            << setw(12) << planeType << setw(10) << flightTime << setw(10) << ticketPrice << endl;
-    }
-};
-bool error() {
-    if (cin.fail()) {
-        cin.clear();
-        cin.ignore(INT_MAX, '\n');
-        return false;
-    }
-    return true;
-}
-void inputFlight(vector<AEROFLOT>& flights, int n) {
-    for (int i = 0; i < n; i++) {
-        int num;
-        string dep, dest, type;
-        double time, price;
-
-        cout << "Введите данные для рейса " << i + 1 << ":\n";
-        while (true) {
-            cout << "Номер рейса: ";
-            cin >> num;
-            if (error() && num > 0) break;
+template <typename T> // Сортировка включением (Эффективен для небольших массивов
+                      // или массивов, которые почти отсортированы)
+void insertionSort(vector<T>& arr, int& comparisons, int& swaps) {
+    int n = arr.size();
+    for (int i = 1; i < n; i++) {
+        T key = arr[i];
+        int j = i - 1;
+        comparisons++;
+        while (j >= 0 && arr[j] > key) {
+            comparisons++;
+            arr[j + 1] = arr[j];
+            j--;
+            swaps++;
         }
-        cin.ignore();
-        cout << "Пункт вылета: ";
-        getline(cin, dep);
-
-        cout << "Пункт назначения: ";
-        getline(cin, dest);
-
-        cout << "Тип самолета: ";
-        getline(cin, type);
-
-        while (true) {
-            cout << "Время в пути (в часах): ";
-            cin >> time;
-            if (error() && time > 0) break;
+        arr[j + 1] = key;
+        if (j == -1) {
+            comparisons--;
         }
-
-        while (true) {
-            cout << "Цена билета: ";
-            cin >> price;
-            if (error() && price > 0) break;
-        }
-        cout << endl;
-
-        flights.emplace_back(num, dep, dest, type, time, price);
     }
 }
-void printFlights(const vector<AEROFLOT>& flights) {
-    cout << left;
-    cout << setw(10) << "Номер" << setw(20) << "Вылет" << setw(20) << "Назначение"
-        << setw(12) << "Самолет" << setw(10) << "Время" << setw(10) << "Цена" << endl;
-    for (const auto& flight : flights) {
-        flight.print();
+template <typename T> // Сортировка выбором (Низкая эффективность на больших массивах.
+                      // Число сравнений всегда остаётся высоким, даже если массив 
+                      // уже частично отсортирован)
+void selectionSort(vector<T>& arr, int& comparisons, int& swaps) {
+    int n = arr.size();
+    for (int i = 0; i < n - 1; i++) {
+        int minIndex = i;
+        for (int j = i + 1; j < n; j++) {
+            comparisons++;
+            if (arr[j] < arr[minIndex]) {
+                minIndex = j;
+            }
+        }
+        if (minIndex != i) {
+            swap(arr[i], arr[minIndex]);
+            swaps++;
+        }
+    }
+}
+template <typename T> // Шейкерная сортировка (Быстрее пузырьковой сортировки за
+                      // счёт двустороннего прохода,медленный для больших массивов)
+void shakerSort(vector<T>& arr, int& comparisons, int& swaps) {
+    int n = arr.size();
+    bool swapped = true;
+    int left = 0, right = n - 1;
+    while (swapped) {
+        swapped = false;
+        for (int i = left; i < right; i++) {
+            comparisons++;
+            if (arr[i] > arr[i + 1]) {
+                swap(arr[i], arr[i + 1]);
+                swaps++;
+                swapped = true;
+            }
+        }
+        if (!swapped) break; // Если нет перестановок, массив уже отсортирован
+        swapped = false;
+        right--;
+        for (int i = right; i > left; i--) {
+            comparisons++;
+            if (arr[i] < arr[i - 1]) {
+                swap(arr[i], arr[i - 1]);
+                swaps++;
+                swapped = true;
+            }
+        }
+        left++;
+    }
+}
+template <typename T> // Пирамидальная сортировка (Менее эффективна для небольших массивов)
+void heapify(vector<T>& arr, int n, int i, int& comparisons, int& swaps) {
+    int largest = i;
+    int l = 2 * i + 1;
+    int r = 2 * i + 2;
+
+    if (l < n) {
+        comparisons++;
+        if (arr[l] > arr[largest]) {
+            largest = l;
+        }
+    }
+
+    if (r < n) {
+        comparisons++;
+        if (arr[r] > arr[largest]) {
+            largest = r;
+        }
+    }
+
+    if (largest != i) {
+        swap(arr[i], arr[largest]);
+        swaps++;
+        heapify(arr, n, largest, comparisons, swaps);
+    }
+}
+template <typename T>
+void heapSort(vector<T>& arr, int& comparisons, int& swaps) {
+    int n = arr.size();
+    for (int i = n / 2 - 1; i >= 0; i--) {
+        heapify(arr, n, i, comparisons, swaps);
+    }
+    for (int i = n - 1; i > 0; i--) {
+        swap(arr[0], arr[i]);
+        swaps++;
+        heapify(arr, i, 0, comparisons, swaps);
+    }
+}
+template <typename T> // печать массива
+void printArray(const vector<T>& arr) {
+    for (const T& i : arr) {
+        cout << i << " ";
     }
     cout << endl;
 }
-void searchDestination(const vector<AEROFLOT>& flights, const string& destination) {
-    bool found = false;
-    for (const auto& flight : flights) {
-        if (flight.destination == destination) {
-            cout << left;
-            cout << setw(10) << "Номер" << setw(20) << "Вылет" << setw(20) << "Назначение"
-                << setw(12) << "Самолет" << setw(10) << "Время" << setw(10) << "Цена" << endl;
-            flight.print();
-            found = true;
-        }
-    }
-    if (!found) {
-        cout << "Рейсы с пунктом назначения \"" << destination << "\" не найдены.\n";
-    }
-    cout << endl;
-}
-void sortPrice(vector<AEROFLOT>& flights) { 
-    sort(flights.begin(), flights.end(), [](const AEROFLOT& a, const AEROFLOT& b) { 
-        return a.ticketPrice < b.ticketPrice;
-        }); 
-    printFlights(flights); 
-}
-void sortDestination(vector<AEROFLOT>& flights) {
-    sort(flights.begin(), flights.end(), [](const AEROFLOT& a, const AEROFLOT& b) {
-        return a.destination < b.destination;
-        });
-    printFlights(flights);
-}
-void redactFlight(vector<AEROFLOT>& flights, int flightNumber) {
-    for (auto& flight : flights) {
-        if (flight.flightNumber == flightNumber) {
-            string dep, dest, type;
-            double time, price;
+template <typename T> // типы сортировок
+void typeSorting(vector<T>& originalArr, int& comparisons, int& swaps) {
+    vector<T> arr;
+    int sortChoice;
 
-            cout << "Введите новый пункт вылета: ";
-            cin.ignore();
-            getline(cin, dep);
-            flight.departure = dep;
+    do {
+        cout << "\nВыберите тип сортировки:\n";
+        cout << "0. Выход\n";
+        cout << "1. Сортировка включением\n";
+        cout << "2. Сортировка выбором\n";
+        cout << "3. Шейкерная сортировка\n";
+        cout << "4. Пирамидальная сортировка\n";
+        cout << "Ваш выбор: ";
+        cin >> sortChoice;
 
-            cout << "Введите новый пункт назначения: ";
-            getline(cin, dest);
-            flight.destination = dest;
-
-            cout << "Введите новый тип самолета: ";
-            getline(cin, type);
-            flight.planeType = type;
-
-            while (true) {
-                cout << "Введите новое время в пути (в часах): ";
-                cin >> time;
-                if (error() && time > 0) break;
-            }
-            flight.flightTime = time;
-
-            while (true) {
-                cout << "Введите новую цену билета: ";
-                cin >> price;
-                if (error() && price > 0) break;
-            }
-            flight.ticketPrice = price;
-
-            cout << "Информация обновлена.\n";
-            return;
-        }
-    }
-    cout << "Рейс с номером " << flightNumber << " не найден.\n";
-}
-void Program() {
-    vector<AEROFLOT> flights;
-    int choice;
-
-    while (true) {
-        cout << "    Меню:\n";
-        cout << " 1. Ввести данные о рейсах\n";
-        cout << " 2. Вывести информацию о рейсах\n";
-        cout << " 3. Найти рейс по пункту назначения\n";
-        cout << " 4. Отсортировать рейсы по цене\n";
-        cout << " 5. Отсортировать рейсы по пункту назначения\n";
-        cout << " 6. Редактировать рейс\n";
-        cout << " 0. Выход\n";
-        cout << " Выберите действие: ";
-        cin >> choice;
-        cout << endl;
-
-        if (!error()) continue;
-
-        switch (choice) {
-        case 0:
-            flights.clear();
-            cout << "Выход из программы.\n";
-            return;
-        case 1: {
-            int n;
-            while (true) {
-                cout << "Введите количество рейсов: ";
-                cin >> n;
-                if (error() && n > 0) break;
-            }
-            cout << endl;
-            inputFlight(flights, n);
+        if (sortChoice == 0) {
+            cout << "Выход из сортировок.\n";
             break;
         }
+
+        comparisons = 0;
+        swaps = 0;
+        arr = originalArr;
+
+        switch (sortChoice) {
+        case 1:
+            insertionSort(arr, comparisons, swaps);
+            break;
         case 2:
-            printFlights(flights);
+            selectionSort(arr, comparisons, swaps);
             break;
-        case 3: {
-            string dest;
-            cout << "Введите пункт назначения: ";
-            cin.ignore();
-            getline(cin, dest);
-            searchDestination(flights, dest);
+        case 3:
+            shakerSort(arr, comparisons, swaps);
             break;
-        }
         case 4:
-            sortPrice(flights);
+            heapSort(arr, comparisons, swaps);
             break;
-        case 5:
-            sortDestination(flights);
-            break;
-        case 6: {
-            int flightNumber;
-            while (true) {
-                cout << "Введите номер рейса для редактирования: ";
-                cin >> flightNumber;
-                if (error() && flightNumber > 0) break;
-            }
-            redactFlight(flights, flightNumber);
-            break;
-        }
         default:
-            cout << "Ошибка. Попробуйте снова.\n";
+            cout << "Неверный выбор типа сортировки." << endl;
+            continue;
+        }
+
+        cout << "\nИсходный массив: ";
+        printArray(originalArr);
+        cout << "Отсортированный массив: ";
+        printArray(arr);
+        cout << "Количество сравнений: " << comparisons << "\n";
+        cout << "Количество перестановок: " << swaps << "\n";
+
+    } while (sortChoice != 0);
+}
+template <typename T> // ввод массива
+void iputArray(int n, int& comparisons, int& swaps) {
+    vector<T> arr(n);
+    cout << "Введите элементы массива: \n";
+for (int i = 0; i < n; i++) {
+    while (true) {
+        cout << "Элемент " << i + 1 << ": ";
+        cin >> arr[i];
+        
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка ввода. Попробуйте снова.\n";
+        } else {
+            cin.ignore(INT_MAX, '\n');
             break;
         }
     }
+}
+    typeSorting(arr, comparisons, swaps);
 }
 
 int main() {
     setlocale(LC_ALL, "RU");
-    SetConsoleCP(1251);
-    SetConsoleOutputCP(1251);
+    int n;
+    while (true) {
+        cout << "Введите количество элементов в массиве: ";
+        cin >> n;
+        if (n > 0) {
+            break;
+        }
+        else {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка. Попробуйте снова.\n";
+        }
+    }
 
-    Program();
+    int typeChoice;
+    while (true) {
+        cout << "Выберите тип данных массива(0. Выход | 1. int | 2. char):\n";
+        cout << "Ваш выбор: ";
+        cin >> typeChoice;
+        cin.ignore();
+        int comparisons, swaps;
+
+        switch (typeChoice) {
+        case 0:
+            cout << "Выход из программы.\n";
+            return 0;
+        case 1:
+            iputArray<int>(n, comparisons, swaps);
+            break;
+        case 2:
+            iputArray<char>(n, comparisons, swaps);
+            break;
+        default:
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка. Попробуйте снова.\n";
+        }
+    }
 
     return 0;
 }
