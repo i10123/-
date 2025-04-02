@@ -14,7 +14,6 @@ struct AEROFLOT {
     double flightTime; // время полета
     double ticketPrice; // цена билета
 
-    // создание пустых объектов, когда данные неизвестны заранее
     AEROFLOT() : flightNumber(0), departure(""), destination(""), planeType(""), flightTime(0.0), ticketPrice(0.0) {}
 
     AEROFLOT(int num, string dep, string dest, string type, double time, double price)
@@ -22,7 +21,7 @@ struct AEROFLOT {
     }
 
     ~AEROFLOT() {
-        cout << "Удаление временных данных / удаление всех данных" << endl;
+        cout << "Удаление временных данных." << endl;
     }
 
     void print() const {
@@ -31,7 +30,7 @@ struct AEROFLOT {
             << setw(12) << planeType << setw(10) << flightTime << setw(10) << ticketPrice << endl;
     }
 };
-// обработчик ошибок
+// обработчики ошибок
 bool error() {
     if (cin.fail()) {
         cin.clear();
@@ -39,6 +38,18 @@ bool error() {
         return false;
     }
     return true;
+}
+int checkInt(string massage, int min, int max) {
+    int input;
+    cout << massage;
+    while (true) {
+        cin >> input;
+
+        if (input > min && input < max)
+            return input;
+
+        cout << "Некоректный вывод!" << endl;
+    }
 }
 // ввод данных рейса
 void inputFlight(vector<AEROFLOT>& flights, int n) {
@@ -68,7 +79,6 @@ void inputFlight(vector<AEROFLOT>& flights, int n) {
             cin >> time;
             if (error() && time > 0) break;
         }
-
         while (true) {
             cout << "Цена билета: ";
             cin >> price;
@@ -110,34 +120,34 @@ void searchDestination(const vector<AEROFLOT>& flights, const string& destinatio
 void sortPrice(vector<AEROFLOT>& flights) {
     // встроенная функция сортировки с параметром
     sort(flights.begin(), flights.end(), [](const AEROFLOT& a, const AEROFLOT& b) {
-        return a.ticketPrice < b.ticketPrice;});
+        return a.ticketPrice < b.ticketPrice; });
     printFlights(flights);
 }
 // сортировка А-Я по пункту назначения
 void sortDestination(vector<AEROFLOT>& flights) {
     // встроенная функция 
     sort(flights.begin(), flights.end(), [](const AEROFLOT& a, const AEROFLOT& b) {
-        return a.destination < b.destination;});
+        return a.destination < b.destination; });
     printFlights(flights);
 }
 // редактор рейса
 void redactFlight(vector<AEROFLOT>& flights, int flightNumber) {
-    for (auto it = flights.begin(); it != flights.end(); it++) {
-        if (it->flightNumber == flightNumber) {
+    for (int i = 0; i < flights.size(); i++) {
+        if (flights[i].flightNumber == flightNumber) {
             while (true) {
                 cout << "\nТекущие данные рейса #" << flightNumber << ":\n";
                 cout << left;
                 cout << setw(10) << "Номер" << setw(20) << "Вылет" << setw(20) << "Назначение"
                     << setw(12) << "Самолет" << setw(10) << "Время" << setw(10) << "Цена" << endl;
-                it->print();
+                flights[i].print();
 
                 cout << "\nКакие данные изменить?\n";
-                cout << "1. Номер рейса \n";
-                cout << "2. Пункт вылета \n";
-                cout << "3. Пункт назначения \n";
-                cout << "4. Тип самолета \n";
-                cout << "5. Время в пути \n";
-                cout << "6. Цена билета \n";
+                cout << "1. Номер рейса\n";
+                cout << "2. Пункт вылета\n";
+                cout << "3. Пункт назначения\n";
+                cout << "4. Тип самолета\n";
+                cout << "5. Время в пути\n";
+                cout << "6. Цена билета\n";
                 cout << "7. Удалить этот рейс\n";
                 cout << "0. Закончить редактирование (вернуться в меню)\n";
                 cout << "Выберите пункт: ";
@@ -147,58 +157,58 @@ void redactFlight(vector<AEROFLOT>& flights, int flightNumber) {
 
                 switch (redactChoice) {
                 case 0:
-                    cout << "Редактирование завершено.\n";
+                    cout << "Редактирование завершено.\n\n";
                     return;
 
                 case 1:
                     while (true) {
                         cout << "Новый номер рейса: ";
-                        cin >> it->flightNumber;
-                        if (error() && it->flightNumber > 0) break;
+                        cin >> flights[i].flightNumber;
+                        if (error() && flights[i].flightNumber > 0) break;
                     }
                     break;
 
                 case 2:
                     cin.ignore();
                     cout << "Новый пункт вылета: ";
-                    getline(cin, it->departure);
+                    getline(cin, flights[i].departure);
                     break;
 
                 case 3:
                     cin.ignore();
                     cout << "Новый пункт назначения: ";
-                    getline(cin, it->destination);
+                    getline(cin, flights[i].destination);
                     break;
 
                 case 4:
                     cin.ignore();
                     cout << "Новый тип самолета: ";
-                    getline(cin, it->planeType);
+                    getline(cin, flights[i].planeType);
                     break;
 
                 case 5:
                     while (true) {
                         cout << "Новое время в пути (в часах): ";
-                        cin >> it->flightTime;
-                        if (error() && it->flightTime > 0) break;
+                        cin >> flights[i].flightTime;
+                        if (error() && flights[i].flightTime > 0) break;
                     }
                     break;
 
                 case 6:
                     while (true) {
                         cout << "Новая цена билета: ";
-                        cin >> it->ticketPrice;
-                        if (error() && it->ticketPrice > 0) break;
+                        cin >> flights[i].ticketPrice;
+                        if (error() && flights[i].ticketPrice > 0) break;
                     }
                     break;
 
-                case 7: // Удаление рейса
+                case 7:
                     char del;
                     cout << "Вы уверены, что хотите удалить рейс? (+/-): ";
                     cin >> del;
                     if (del == '+') {
-                        flights.erase(it);
-                        cout << "Рейс #" << flightNumber << " удален.\n";
+                        flights.erase(flights.begin() + i);
+                        cout << "Рейс #" << flightNumber << " удален.\n\n";
                         return;
                     }
                     break;
