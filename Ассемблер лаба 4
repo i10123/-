@@ -1,7 +1,8 @@
 masm
-model small
+.model small
 .386
-.stack 400h
+.model small
+.stack 50h
 
 .data
     sign db ?
@@ -10,18 +11,16 @@ model small
     F dw ?
     msgX db 'Input X: $'
     msgY db 'Input Y: $'
-    msgExample db 'Primer: F = (4596 - 589) / X + (Y * 2385)',10, 13,'$'
-.code
+    msgExample db 'Primer: F = (4596 - 589) / X + (Y * 2385)',10,13,'$'
 
+.code
 InputNumber proc
     mov sign, 0
-    
     mov ah, 01h
     int 21h
     cmp al, '-'
     jne coninput
     mov sign, 1
-    
     mov ah, 01h
     int 21h
 coninput:
@@ -51,17 +50,17 @@ InputNumber endp
 start:
     mov ax, @data
     mov ds, ax
-    
+
     mov dx, offset msgExample
     mov ah, 09h
     int 21h
-    
+
     mov dx, offset msgX
     mov ah, 09h
     int 21h
     call InputNumber
     mov X, cx
-    
+
     mov dx, offset msgY
     mov ah, 09h
     int 21h
@@ -94,13 +93,13 @@ ConvertLoop:
     xor dx, dx
     div bx
     push dx
-    test ax, ax
+    cmp ax, 0
     jnz ConvertLoop
 PrintLoop:
     pop dx
     cmp dx, -1
     je Exit
-    add dl, '0'
+    add dl, 30h
     mov ah, 02h
     int 21h
     jmp PrintLoop
