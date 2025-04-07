@@ -16,20 +16,32 @@ InputNumber proc
     mov ah, 01h
     int 21h
     cmp al, '-'
-    jne coninput
+    jne check_first_num
     mov sign, 1
     mov ah, 01h
     int 21h
+
+check_first_num:
+    cmp al, '0'
+    jb exit   ; Если меньше '0', выход
+    cmp al, '9'
+    ja exit   ; Если больше '9', выход
+
 coninput:
     sub al, 30h
     mov ah, 0
-    mov bl, 10
     mov cl, al
+    mov bl, 10
+
 Input:
     mov ah, 01h
     int 21h
     cmp al, 0Dh
     je EndPrint
+    cmp al, '0'
+    jb exit    ; Если меньше '0', выход
+    cmp al, '9'
+    ja exit    ; Если больше '9', выход
     sub al, 30h
     mov dl, al
     mov al, cl
@@ -37,6 +49,7 @@ Input:
     add al, dl
     mov cl, al
     jmp Input
+
 EndPrint:
     cmp sign, 1
     jne final
@@ -66,14 +79,12 @@ ConvertLoop:
 PrintLoop:
     pop dx
     cmp dx, 10
-    je Exit
+    je exit
     add dl, '0'
     mov ah, 02h
     int 21h
     loop PrintLoop
-Exit:
-    mov ax, 4C00h
-    int 21h
+    ret
 OutputNumber endp
 
 start:
@@ -118,4 +129,7 @@ s_max:
     pop ax
     cbw
     call OutputNumber
+exit:
+    mov ax, 4C00h
+    int 21h
 end start
