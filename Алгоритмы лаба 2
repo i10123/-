@@ -3,11 +3,11 @@
 #include <windows.h>
 #include <string>
 #include <vector>
-#include <utility>
 using namespace std;
 
 template <typename T> // Сортировка включением 
-// (+) небольшие или почти отсортированные данные
+// первый элемент уже отсортирован, начинаем со второго, сравниваем ДАННЫЙ элемент с элементом 
+// до ДАННОГО, если ДАННЫЙ элемент меньше, то меняем местами и продолжаем дальше сравнивать
 void insertionSort(vector<T>& arr, int& comparisons, int& swaps) {
     int n = arr.size();
     for (int i = 1; i < n; i++) {
@@ -26,7 +26,8 @@ void insertionSort(vector<T>& arr, int& comparisons, int& swaps) {
     }
 }
 template <typename T> // Сортировка выбором 
-// (+) минимальное количество перестановок, небольшие массивы
+// находится минимальный элемент массива, и в конце если индекс минимального 
+// элемента отличается от индекса начального элемента, тогда просходит перестановка
 void selectionSort(vector<T>& arr, int& comparisons, int& swaps) {
     int n = arr.size();
     for (int i = 0; i < n - 1; i++) {
@@ -44,7 +45,8 @@ void selectionSort(vector<T>& arr, int& comparisons, int& swaps) {
     }
 }
 template <typename T> // Шейкерная сортировка 
-// (+) Если массив небольшой или почти отсортирован
+// нахождение и перемещение минимального и максимального элемента по концам, 
+// после чего границы уменьшаются, если перемещений не было, значит массив отсортирован
 void shakerSort(vector<T>& arr, int& comparisons, int& swaps) {
     int n = arr.size();
     bool swapped = true;
@@ -76,7 +78,9 @@ void shakerSort(vector<T>& arr, int& comparisons, int& swaps) {
     }
 }
 template <typename T> // Пирамидальная сортировка 
-// (+) максимально эффективна для больших объемах данных
+// происходит переструктуризация в максимальную кучу, находится максимальный
+// элемент среди родительской и дочерних элементов, если перестановка произошла, 
+// выполняем переструктуризацию массива еще раз
 void heapfunc(vector<T>& arr, int n, int i, int& comparisons, int& swaps) {
     int largest = i;
     int l = 2 * i + 1;
@@ -101,6 +105,10 @@ void heapfunc(vector<T>& arr, int n, int i, int& comparisons, int& swaps) {
     }
 }
 template <typename T>
+// находим наибольший родительский корень, который будет под первым номером,
+// затем мы меняем местами первый и последний элементы, уменьшаем границу массива и 
+// вызываем обратно сортировку для оставшейся кучи
+// почему с середины? - после середины есть только листья, которые являются кучей
 void heapSort(vector<T>& arr, int& comparisons, int& swaps) {
     int n = arr.size();
     for (int i = n / 2 - 1; i >= 0; i--) {
