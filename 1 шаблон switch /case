@@ -1,0 +1,44 @@
+#include <iostream>
+
+using namespace std;
+
+int main() {
+    setlocale(LC_ALL, "Russian");
+    cout << "Номера задач: \n";
+    cout << "Выход из программы - 0 \n";
+    cout << "\n";
+    cout << "\n";
+    cout << "\n";
+
+    while (true) {
+        short int n;
+        cout << "Введите номер задачи: ";
+        cin >> n;
+        cin.ignore();
+
+        switch (n) {
+        case 0: {
+            cout << "Завершение программы." << endl;
+            return 0;
+        }
+        case 1: {
+           
+            break;
+        }
+        case 2: {
+            
+            break;
+        }
+        case 3: {
+            
+            break;
+        }
+        default: {
+            cout << "Неверный номер задачи. Попробуйте снова." << endl;
+            break;
+        }
+        }
+    }
+
+    return 0;
+}
