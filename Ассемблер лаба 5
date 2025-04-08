@@ -1,3 +1,4 @@
+// проверка 0-9
 masm
 .model small
 .386
@@ -57,6 +58,168 @@ EndPrint:
 final:
     ret
 InputNumber endp
+OutputNumber proc
+    cmp ax, 0
+    jns Positive
+    push ax
+    mov dl, '-'
+    mov ah, 02h
+    int 21h
+    pop ax
+    neg ax
+Positive:
+    mov bx, 10
+    xor cx, cx
+ConvertLoop:
+    xor dx, dx
+    div bx
+    push dx
+    inc cx
+    cmp ax, 0
+    jnz ConvertLoop
+PrintLoop:
+    pop dx
+    cmp dx, 10
+    je exit
+    add dl, '0'
+    mov ah, 02h
+    int 21h
+    loop PrintLoop
+    ret
+OutputNumber endp
+
+start:
+    mov ax, @data
+    mov ds, ax
+    
+    mov dx, offset msg1
+    mov ah, 09h
+    int 21h
+    call InputNumber
+    push cx
+    xor cx, cx
+    
+    mov dx, offset msg2
+    mov ah, 09h
+    int 21h
+    call InputNumber
+    pop ax
+    cmp al, cl
+    jge f_max
+    mov al, cl
+f_max:
+    push ax
+    xor cx, cx
+    
+    mov dx, offset msg3
+    mov ah, 09h
+    int 21h
+    call InputNumber
+    pop ax
+    cmp al, cl
+    jge s_max
+    mov al, cl
+s_max:
+    push 4
+    push ax
+    
+    mov dx, offset msgString
+    mov ah, 09h
+    int 21h
+    
+    pop ax
+    cbw
+    call OutputNumber
+exit:
+    mov ax, 4C00h
+    int 21h
+end start
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// проверка 0-9 и -128-127
+masm
+.model small
+.386
+.stack 128
+
+.data
+    sign db ?
+    msg1 db 'Input 1st num: $'
+    msg2 db 'Input 2nd num: $'
+    msg3 db 'Input 3rd num: $'
+    msgString db 'Max: $'
+.code
+
+InputNumber proc
+    mov sign, 0
+    mov ah, 01h
+    int 21h
+    cmp al, '-'
+    jne check_first_num
+    mov sign, 1
+    mov ah, 01h
+    int 21h
+
+check_first_num:
+    cmp al, '0'
+    jb input_error
+    cmp al, '9'
+    ja input_error
+
+coninput:
+    sub al, 30h
+    mov ah, 0
+    mov cl, al
+    mov bl, 10
+
+Input:
+    mov ah, 01h
+    int 21h
+    cmp al, 0Dh
+    je EndPrint
+    cmp al, '0'
+    jb input_error
+    cmp al, '9'
+    ja input_error
+    sub al, 30h
+    mov dl, al
+    
+    ; Проверка на переполнение перед умножением
+    mov al, cl
+    cmp al, 12       ; 127/10 = 12 (максимум перед умножением)
+    ja input_error
+    mul bl
+    jo input_error   ; Если переполнение при умножении
+    
+    ; Проверка на переполнение после сложения
+    add al, dl
+    jo input_error   ; Если переполнение при сложении
+    mov cl, al
+    jmp Input
+
+EndPrint:
+    cmp sign, 1
+    jne check_positive
+    neg cl
+    js check_negative ; Проверка для отрицательных чисел
+    jmp input_error   ; Если neg cl дал положительное - было 128
+    
+check_positive:
+    cmp cl, 127
+    ja input_error
+    jmp final
+    
+check_negative:
+    cmp cl, 128
+    ja input_error
+    jmp final
+    
+input_error:
+    jmp exit
+    
+final:
+    ret
+InputNumber endp
+
 OutputNumber proc
     cmp ax, 0
     jns Positive
