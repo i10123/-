@@ -56,7 +56,7 @@ Input:
 EndPrint:
     cmp sign, 1
     jne check_positive
-    cmp cx, 128
+    cmp cl, 128
     ja input_error
     neg cl
     jmp final
