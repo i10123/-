@@ -1,1 +1,394 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <iomanip>
+#include <windows.h>
 
+using namespace std;
+
+// обработчик ошибок
+static int input_check(string message, int min, int max) {
+    int input;
+    while (true) {
+        cout << message;
+        cin >> input;
+
+        if (cin.fail() || input < min || input > max) {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка ввода! Пожалуйста, введите число от " << min << " до " << max << "." << endl;
+        }
+        else {
+            return input;
+        }
+    }
+}
+// проверка файла на существование и наличие данных
+static bool checkFile(ifstream& file_in, const string& inputFile) {
+    file_in.open(inputFile);
+
+    if (!file_in.is_open()) {
+        cout << "Ошибка: файл \"" << inputFile << "\" не найден." << endl << endl;
+        return false;
+    }
+
+    if (file_in.peek() == EOF) {
+        cout << "Файл \"" << inputFile << "\" пуст." << endl << endl;
+        return false;
+    }
+
+    return true;
+}
+
+// Задание 1
+void parityNumbers(const string& inputFile, const string& outputFile) {
+    ifstream file_in;
+    if (!checkFile(file_in, inputFile)) return;
+    ofstream file_out(outputFile);
+    vector<int> numbers;
+    vector<int> chet, nechet;
+    int num;
+
+    // Чтение чисел из файла
+    cout << "Данные из файла " << inputFile << ": ";
+    while (file_in >> num) {
+        numbers.push_back(num);
+        cout << num << " ";
+        if (num % 2 == 0) {
+            chet.push_back(num);
+        }
+        else {
+            nechet.push_back(num);
+        }
+    }
+    cout << endl;
+    file_in.close();
+
+    // Формирование правильного порядка с чередованием
+    vector<int> result;
+    size_t chetIndex = 0, nechetIndex = 0;
+    bool flagChet = !numbers.empty() && numbers[0] % 2 == 0; // Четность первого элемента
+
+    while (chetIndex < chet.size() || nechetIndex < nechet.size()) {
+        if (flagChet && chetIndex < chet.size()) {
+            result.push_back(chet[chetIndex++]);
+            flagChet = false;
+        }
+        else if (!flagChet && nechetIndex < nechet.size()) {
+            result.push_back(nechet[nechetIndex++]);
+            flagChet = true;
+        }
+        else if (chetIndex < chet.size()) {
+            result.push_back(chet[chetIndex++]);
+        }
+        else if (nechetIndex < nechet.size()) {
+            result.push_back(nechet[nechetIndex++]);
+        }
+    }
+
+    // Запись результата в файл
+    for (int r : result) {
+        file_out << r << " ";
+    }
+    file_out.close();
+
+    // Вывод содержимого результирующего файла
+    cout << "Файл " << outputFile << " создан.\nСодержимое файла: ";
+    ifstream checkFile(outputFile);
+    int res;
+    while (checkFile >> res) {
+        cout << res << " ";
+    }
+    checkFile.close();
+    cout << endl << endl;
+}
+
+// Задание 2
+struct Student {
+    string fio = "";              // ФИО
+    int age = 0;                 // возраст
+    string gender = "";         // пол
+    int course = 0;            // курс
+    double performance = 0.0; // успеваемость (общая средняя оценка)
+};
+// Создание пустого файла (если он не существует)
+static void createFile(const string& filename) {
+    ifstream checkFile(filename);
+    if (checkFile) return;
+
+    ofstream file(filename);
+    if (!file) {
+        cout << "Ошибка: не удалось создать файл!" << endl;
+        return;
+    }
+
+    cout << "Файл \"" << filename << "\" успешно создан!" << endl;
+}
+// Просмотр содержимого файла с форматированием таблицы
+void viewFile(const string& filename) {
+    ifstream file(filename);
+    if (!file) {
+        cout << "Ошибка: файл \"" << filename << "\" не найден!" << endl;
+        return;
+    }
+
+    cout << "\nСписок студентов:\n";
+    cout << "-----------------------------------------------------------------------------------\n";
+    cout << setw(40) << left << "ФИО"
+        << setw(10) << left << "Возраст"
+        << setw(10) << left << "Пол"
+        << setw(10) << left << "Курс"
+        << setw(10) << left << "Успеваемость\n";
+    cout << "-----------------------------------------------------------------------------------\n";
+
+    string line;
+    while (getline(file, line)) {
+        stringstream ss(line);
+        Student student;
+        getline(ss, student.fio, ',');
+        ss >> student.age;
+        ss.ignore();
+        getline(ss, student.gender, ',');
+        ss >> student.course;
+        ss.ignore();
+        ss >> student.performance;
+
+        cout << setw(40) << left << student.fio
+            << setw(10) << left << student.age
+            << setw(10) << left << student.gender
+            << setw(10) << left << student.course
+            << setw(10) << fixed << setprecision(2) << student.performance
+            << endl << endl;
+    }
+}
+
+// Добавление студента
+void addStudent(const string& filename) {
+    ofstream file(filename, ios::app);
+    if (!file) {
+        cout << "Ошибка: невозможно открыть файл \"" << filename << "\"!" << endl;
+        return;
+    }
+
+    Student student;
+    cout << "Введите ФИО: ";
+    cin.ignore();
+    getline(cin, student.fio);
+    cout << "Введите возраст: ";
+    cin >> student.age;
+    cout << "Введите пол (М/Ж): ";
+    cin >> student.gender;
+    cout << "Введите курс: ";
+    cin >> student.course;
+    cout << "Введите средний балл (0 - 10): ";
+    cin >> student.performance;
+
+    file << student.fio << "," << student.age << "," << student.gender << ","
+        << student.course << "," << student.performance << endl;
+
+    cout << "Запись добавлена!\n";
+}
+
+// Удаление студента по ФИО
+void deleteStudent(const string& filename) {
+    ifstream file(filename);
+    if (!file) {
+        cout << "Ошибка: файл \"" << filename << "\" не найден!" << endl;
+        return;
+    }
+
+    vector<Student> students;
+    string nameToDelete;
+    cout << "Введите ФИО студента для удаления: ";
+    cin.ignore();
+    getline(cin, nameToDelete);
+
+    string line;
+    while (getline(file, line)) {
+        stringstream ss(line);
+        Student student;
+        getline(ss, student.fio, ',');
+        ss >> student.age;
+        ss.ignore();
+        getline(ss, student.gender, ',');
+        ss >> student.course;
+        ss.ignore();
+        ss >> student.performance;
+
+        if (student.fio != nameToDelete) {
+            students.push_back(student);
+        }
+    }
+    file.close();
+
+    ofstream outFile(filename);
+    for (const Student& student : students) {
+        outFile << student.fio << "," << student.age << "," << student.gender << ","
+            << student.course << "," << student.performance << endl;
+    }
+
+    cout << "Студент \"" << nameToDelete << "\" удален!\n";
+}
+
+// Корректировка данных студента
+void editStudent(const string& filename) {
+    ifstream file(filename);
+    if (!file) {
+        cout << "Ошибка: файл \"" << filename << "\" не найден!" << endl;
+        return;
+    }
+
+    vector<Student> students;
+    string nameToEdit;
+    cout << "Введите ФИО студента для корректировки: ";
+    cin.ignore();
+    getline(cin, nameToEdit);
+
+    string line;
+    bool found = false;
+    while (getline(file, line)) {
+        stringstream ss(line);
+        Student student;
+        getline(ss, student.fio, ',');
+        ss >> student.age;
+        ss.ignore();
+        getline(ss, student.gender, ',');
+        ss >> student.course;
+        ss.ignore();
+        ss >> student.performance;
+
+        if (student.fio == nameToEdit) {
+            found = true;
+            cout << "Введите новые данные для студента \"" << student.fio << "\":\n";
+            cout << "Возраст: ";
+            cin >> student.age;
+            cout << "Пол (М/Ж): ";
+            cin >> student.gender;
+            cout << "Курс: ";
+            cin >> student.course;
+            cout << "Средний балл (0 - 10): ";
+            cin >> student.performance;
+        }
+
+        students.push_back(student);
+    }
+    file.close();
+
+    ofstream outFile(filename);
+    for (const Student& student : students) {
+        outFile << student.fio << "," << student.age << "," << student.gender << ","
+            << student.course << "," << student.performance << endl;
+    }
+
+    if (found) {
+        cout << "Запись обновлена!\n";
+    }
+    else {
+        cout << "Студент \"" << nameToEdit << "\" не найден!\n";
+    }
+}
+
+// Формирование файла с отличниками (GPA от 9.0 до 10.0)
+void saveTopStudents(const string& inputFile, const string& outputFile, int nCourse) {
+    ifstream file(inputFile);
+    ofstream outFile(outputFile);
+
+    if (!file || !outFile) {
+        cout << "Ошибка открытия файлов!" << endl;
+        return;
+    }
+
+    string line;
+    bool hasTopStudents = false;
+
+    while (getline(file, line)) {
+        stringstream ss(line);
+        Student student;
+        getline(ss, student.fio, ',');
+        ss >> student.age;
+        ss.ignore();
+        getline(ss, student.gender, ',');
+        ss >> student.course;
+        ss.ignore();
+        ss >> student.performance;
+
+        if (student.course == nCourse && student.performance >= 9.0 && student.performance <= 10.0) {
+            outFile << student.fio << "," << student.age << "," << student.gender << ","
+                << student.course << "," << student.performance << endl;
+            hasTopStudents = true;
+        }
+    }
+
+    if (hasTopStudents) {
+        cout << "Файл \"" << outputFile << "\" с отличниками создан!\n";
+    }
+    else {
+        cout << "На " << nCourse << " курсе нет отличников.\n";
+    }
+}
+
+// Меню для 2 задачи
+void menu2(const string& filename) {
+    int choice;
+    while (true) {
+        cout << "Меню:\n";
+        cout << "1. Просмотр базы студентов\n";
+        cout << "2. Добавить студента\n";
+        cout << "3. Удалить студента\n";
+        cout << "4. Редактировать студента\n";
+        cout << "5. Создать файл отличников\n";
+        cout << "0. Выход\n";
+        int choice = input_check("Выберите действие: ", 0, 3);
+
+        switch (choice) {
+        case 1: viewFile(filename); break;
+        case 2: addStudent(filename); break;
+        case 3: deleteStudent(filename); break;
+        case 4: editStudent(filename); break;
+        case 5: int course; cin >> course; saveTopStudents(filename, "top_students.txt", course); break;
+        case 0: return;
+        }
+    }
+}
+// Задание 3
+
+// Меню
+void menu() {
+
+    string file_name = "Student_Database.txt";
+
+    while (true) {
+        cout << "   Задачи: \n";
+        cout << "1. Формирование файла с чередующейся четностью чисел. \n";
+        cout << "2. База данных о студентах. \n";
+        cout << "3. Файл, хранящий фамилии студентов, которые решили правильно. \n";
+        cout << "0. Выход из программы. \n\n";
+
+        int n = input_check("Введите номер задачи: ", 0, 3);
+        switch (n) {
+        case 0:
+            cout << "Завершение программы." << endl;
+            return;
+        case 1:
+            parityNumbers("f.txt", "g.txt");
+            break;
+        case 2:
+            createFile(file_name);
+            menu2(file_name);
+            cout << endl;
+            break;
+        case 3:
+            break;
+        }
+    }
+}
+
+int main() {
+    setlocale(LC_ALL, "RU");
+    SetConsoleOutputCP(CP_UTF8);
+
+    menu();
+    return 0;
+}
