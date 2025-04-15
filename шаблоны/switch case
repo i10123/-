@@ -2,43 +2,49 @@
 
 using namespace std;
 
-int main() {
-    setlocale(LC_ALL, "Russian");
-    cout << "Номера задач: \n";
-    cout << "Выход из программы - 0 \n";
-    cout << "\n";
-    cout << "\n";
-    cout << "\n";
-
+int input_check(string message, int min, int max) {
+    int input;
     while (true) {
-        short int n;
-        cout << "Введите номер задачи: ";
-        cin >> n;
-        cin.ignore();
+        cout << message;
+        cin >> input;
 
-        switch (n) {
-        case 0: {
-            cout << "Завершение программы." << endl;
-            return 0;
+        if (cin.fail() || input < min || input > max) {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка ввода! Пожалуйста, введите число от " << min << " до " << max << "." << endl;
         }
-        case 1: {
-           
-            break;
-        }
-        case 2: {
-            
-            break;
-        }
-        case 3: {
-            
-            break;
-        }
-        default: {
-            cout << "Неверный номер задачи. Попробуйте снова." << endl;
-            break;
-        }
+        else {
+            return input;
         }
     }
+}
 
+int main() {
+    setlocale(LC_ALL, "RU");
+
+    while (true) {
+        cout << "   Задачи: \n";
+        cout << "1. Формирование файла с чередующейся четностью чисел. \n";
+        cout << "2. База данных о студентах. \n";
+        cout << "3. Файл, хранящий фамилии студентов, которые решили правильно. \n";
+        cout << "0. Выход из программы. \n\n";
+
+        int n = input_check("Введите номер задачи: ", 0, 3);
+
+        switch (n) {
+        case 0:
+            cout << "Завершение программы." << endl;
+            return 0;
+        case 1:
+            cout << "Реализация задачи 1." << endl;
+            break;
+        case 2:
+            cout << "Реализация задачи 2." << endl;
+            break;
+        case 3:
+            cout << "Реализация задачи 3." << endl;
+            break;
+        }
+    }
     return 0;
 }
