@@ -6,7 +6,9 @@
 #include <iomanip>
 #include <windows.h>
 #include <locale>
+#include <filesystem>
 
+namespace fs = std::filesystem;
 using namespace std;
 
 // обработчик ошибок, добавить проверку на правильный ввод(int вместо double)
@@ -198,7 +200,6 @@ void addStudent(const string& filename) {
 
     Student student;
     cout << "Введите ФИО: ";
-    cin.ignore();
     getline(cin, student.fio);
     int n = input_check("Введите возраст: ", 17, 100);
     student.age = n;
@@ -212,7 +213,7 @@ void addStudent(const string& filename) {
     file << student.fio << "," << student.age << "," << student.gender << ","
         << student.course << "," << student.performance << endl;
 
-    cout << "Запись добавлена!\n";
+    cout << "Запись добавлена!\n\n";
 }
 // Удаление студента по ФИО
 void deleteStudent(const string& filename) {
@@ -308,7 +309,8 @@ void redactStudent(const string& filename) {
     ofstream outFile(filename);
     for (const Student& student : students) {
         outFile << student.fio << "," << student.age << "," << student.gender << ","
-            << student.course << "," << student.performance << endl; }
+            << student.course << "," << student.performance << endl;
+    }
 
     if (check_fio) { cout << "Запись обновлена!\n"; }
     else { cout << "Студент \"" << nameForRedact << "\" не найден!\n"; }
@@ -361,30 +363,132 @@ void menu2(const string& filename) {
         int choice = input_check("Выберите действие: ", 0, 5);
 
         switch (choice) {
-        case 1: 
-            viewFile(filename); 
+        case 1:
+            viewFile(filename);
             break;
-        case 2: 
-            addStudent(filename); 
+        case 2:
+            addStudent(filename);
             break;
-        case 3: 
-            deleteStudent(filename); 
+        case 3:
+            deleteStudent(filename);
             break;
-        case 4: 
-            redactStudent(filename); 
+        case 4:
+            redactStudent(filename);
             break;
-        case 5: 
-            int course; 
+        case 5:
+            int course;
             cout << "Введите курс: ";
-            cin >> course; 
-            createfileTopStudents(filename, "top_students.txt", course); 
+            cin >> course;
+            createfileTopStudents(filename, "top_students.txt", course);
             break;
         case 0: return;
         }
     }
 }
-// Задание 3
 
+// Задание 3
+void task3() {
+    string adresPapki;
+    cout << "Введите путь к папке (например, C:\\Users\\user\\source\\repos): ";
+    getline(cin, adresPapki);
+
+    // проверка на наличие пути и папки
+    if (!fs::exists(adresPapki) || !fs::is_directory(adresPapki)) {
+        cout << "Указанной папки не существует!\n\n";
+        return;
+    }
+
+    // Чтение правильной матрицы из output.txt
+    string output_file_Adres = adresPapki + "\\output.txt";
+    ifstream outputFile(output_file_Adres);
+
+    if (!outputFile) {
+        cout << "Ошибка: файл output.txt не найден в папке!\n\n";
+        return;
+    }
+
+    int rowsCorrect, colsCorrect;
+    outputFile >> rowsCorrect >> colsCorrect;
+    outputFile.ignore();
+
+    vector<vector<int>> Matrix(rowsCorrect, vector<int>(colsCorrect));
+    for (int i = 0; i < rowsCorrect && outputFile; i++) {
+        for (int j = 0; j < colsCorrect; j++) {
+            if (!(outputFile >> Matrix[i][j])) {
+                cout << "Ошибка: некорректные данные в output.txt!\n\n";
+                return;
+            }
+        }
+        outputFile.ignore();
+    }
+    outputFile.close();
+
+    // Чтение матриц студентов и сравнение
+    vector<string> completetaskStudents;
+    for (const auto& entry : fs::directory_iterator(adresPapki)) {
+        if (entry.path().extension() == ".txt" && entry.path().filename() != "output.txt" && entry.path().filename() != "results.txt") {
+            ifstream file(entry.path());
+            if (!file) continue; // Пропускаем, если нету файла
+
+            string fio;
+            int rows, cols;
+            getline(file, fio);
+            file >> rows >> cols;
+            file.ignore();
+
+            if (rows != rowsCorrect || cols != colsCorrect) {
+                file.close();
+                continue; // Пропускаем, если размеры не совпадают
+            }
+
+            vector<vector<int>> matrix(rows, vector<int>(cols));
+            bool check_good = true;
+            for (int i = 0; i < rows && file; i++) {
+                for (int j = 0; j < cols; j++) {
+                    if (!(file >> matrix[i][j])) {
+                        check_good = false;
+                        break;
+                    }
+                }
+                if (!check_good) break;
+                file.ignore();
+            }
+
+            if (check_good) {
+                bool complete = true;
+                for (int i = 0; i < rows; i++) {
+                    for (int j = 0; j < cols; j++) {
+                        if (matrix[i][j] != Matrix[i][j]) {
+                            complete = false;
+                            break;
+                        }
+                    }
+                    if (!complete) break;
+                }
+                if (complete) {
+                    completetaskStudents.push_back(fio);
+                }
+            }
+            file.close();
+        }
+    }
+
+    // Запись результатов
+    ofstream outFile(adresPapki + "\\results.txt");
+    if (!outFile) {
+        cout << "Ошибка: не удалось создать файл results.txt!\n\n";
+        return;
+    }
+
+    bool hasComplete = false;
+    for (const string& fio : completetaskStudents) {
+        outFile << fio << endl;
+        hasComplete = true;
+    }
+
+    if (hasComplete) { cout << "Файл results.txt создан с фамилиями студентов, успешно решивших задачу.\n\n"; }
+    else { cout << "Ни один студент не решил задачу корректно.\n\n"; }
+}
 // Меню
 void menu() {
 
@@ -411,15 +515,16 @@ void menu() {
             cout << endl;
             break;
         case 3:
+            task3();
             break;
         }
     }
 }
 
 int main() {
-    setlocale(LC_ALL, "Russian");
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
+    setlocale(LC_ALL, "Russian");
     menu();
     return 0;
 }
