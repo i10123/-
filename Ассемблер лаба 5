@@ -1,4 +1,3 @@
-masm
 .model small
 .386
 .stack 128
@@ -8,7 +7,7 @@ masm
     msg1 db 'Input 1st num: $'
     msg2 db 'Input 2nd num: $'
     msg3 db 'Input 3rd num: $'
-    error_mgs db 'Error number!', 10, 13,'$'
+    error_mgs db ' Error number!', 10, 13,'$'
     msgString db 'Max: $'
 .code
 
@@ -20,6 +19,7 @@ input_error:
     int 21h
 input_start:
     mov sign, 0
+    xor cx, cx
     mov ah, 01h
     int 21h
     cmp al, '-'
@@ -49,9 +49,10 @@ Input:
     mov dl, al
     mov al, cl
     imul bl
+    jo input_error
     add al, dl
+    jo input_error
     mov cl, al
-    cbw
     jmp Input
 EndPrint:
     cmp sign, 1
@@ -66,6 +67,7 @@ check_positive:
 final:
     ret
 InputNumber endp
+
 OutputNumber proc
     cmp ax, 0
     jns Positive
@@ -87,8 +89,6 @@ ConvertLoop:
     jnz ConvertLoop
 PrintLoop:
     pop dx
-    cmp dx, 10
-    je exit
     add dl, '0'
     mov ah, 02h
     int 21h
@@ -128,7 +128,6 @@ f_max:
     jge s_max
     mov al, cl
 s_max:
-    push 4
     push ax
     
     mov dx, offset msgString
@@ -138,7 +137,7 @@ s_max:
     pop ax
     cbw
     call OutputNumber
-exit:
+    
     mov ax, 4C00h
     int 21h
 end start
