@@ -6,57 +6,63 @@
 #include <iomanip>
 #include <ctime>
 #include <filesystem>
-#include <codecvt>
 #include <locale>
 
 using namespace std;
 namespace fs = filesystem;
 
 // Константы
-const int WINDOW_WIDTH = 1280; // Ширина окна
-const int WINDOW_HEIGHT = 720; // Высота окна
-const int SIDEBAR_WIDTH = 250; // Ширина боковой панели
-const float BUTTON_HEIGHT = 50.0f; // Высота кнопки
-const sf::Color BG_COLOR(20, 20, 20); // Цвет фона
-const sf::Color SIDEBAR_COLOR(30, 30, 30); // Цвет боковой панели
-const sf::Color BUTTON_COLOR(50, 50, 50); // Цвет кнопки
-const sf::Color BUTTON_HOVER_COLOR(70, 70, 70); // Цвет кнопки при наведении
-const sf::Color TEXT_COLOR(200, 200, 200); // Цвет текста
+const int WINDOW_WIDTH = 1280;
+const int WINDOW_HEIGHT = 720;
+const int SIDEBAR_WIDTH = 250;
+const float BUTTON_HEIGHT = 50.0f;
+const sf::Color BG_COLOR(20, 20, 20);
+const sf::Color SIDEBAR_COLOR(30, 30, 30);
+const sf::Color BUTTON_COLOR(50, 50, 50);
+const sf::Color BUTTON_HOVER_COLOR(70, 70, 70);
+const sf::Color TEXT_COLOR(200, 200, 200);
 
 // Вспомогательные функции
 static string getCurrentDate() {
     auto now = time(nullptr);
     tm timeInfo;
-    localtime_s(&timeInfo, &now); // Безопасная версия localtime
+    localtime_s(&timeInfo, &now);
 
     stringstream ss;
-    ss << put_time(&timeInfo, "%d.%m.%Y"); // Передаем адрес структуры
+    ss << put_time(&timeInfo, "%d.%m.%Y");
     return ss.str();
 }
-
 
 static string formatCurrency(float amount) {
     stringstream ss;
     ss << fixed << setprecision(2) << amount;
-    return ss.str() + " ₽";
+    return ss.str() + " BYN";
 }
 
-// Конвертация строк для поддержки UTF-8
+// Упрощенные функции конвертации (без codecvt)
 static wstring to_wstring(const string& str) {
-    wstring_convert<codecvt_utf8<wchar_t>> converter;
-    return converter.from_bytes(str);
+    wstring result;
+    result.reserve(str.size());
+    for (char c : str) {
+        result += static_cast<wchar_t>(c);
+    }
+    return result;
 }
 
 static string to_string(const wstring& wstr) {
-    wstring_convert<codecvt_utf8<wchar_t>> converter;
-    return converter.to_bytes(wstr);
+    string result;
+    result.reserve(wstr.size());
+    for (wchar_t wc : wstr) {
+        result += static_cast<char>(wc);
+    }
+    return result;
 }
 
 // Структура для хранения данных о транзакции
 struct Transaction {
     string date;
-    bool isIncome;
-    float amount;
+    bool isIncome = true; //true or false
+    float amount = 0.0;
     string category;
     string comment;
 };
@@ -170,7 +176,6 @@ public:
 
         loadData();
     }
-
 
     void processEvents() {
         sf::Event event;
@@ -321,36 +326,34 @@ private:
             settingsFile.close();
         }
 
-        // Загрузка категорий
-        wifstream categoriesFile("data/categories.csv");
-        categoriesFile.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
+        // Загрузка категорий (упрощенная версия без codecvt)
+        ifstream categoriesFile("data/categories.csv");
         if (categoriesFile.is_open()) {
-            wstring line;
+            string line;
             while (getline(categoriesFile, line)) {
-                wstringstream ss(line);
-                wstring name, limit, count;
-                getline(ss, name, L',');
-                getline(ss, limit, L',');
-                getline(ss, count, L',');
-                categories.push_back({ to_string(name), stof(to_string(limit)), stoi(to_string(count)) });
+                stringstream ss(line);
+                string name, limit, count;
+                getline(ss, name, ',');
+                getline(ss, limit, ',');
+                getline(ss, count, ',');
+                categories.push_back({ name, stof(limit), stoi(count) });
             }
             categoriesFile.close();
         }
 
-        // Загрузка транзакций
-        wifstream transactionsFile("data/transactions.csv");
-        transactionsFile.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
+        // Загрузка транзакций (упрощенная версия без codecvt)
+        ifstream transactionsFile("data/transactions.csv");
         if (transactionsFile.is_open()) {
-            wstring line;
+            string line;
             while (getline(transactionsFile, line)) {
-                wstringstream ss(line);
-                wstring date, isIncome, amount, category, comment;
-                getline(ss, date, L',');
-                getline(ss, isIncome, L',');
-                getline(ss, amount, L',');
-                getline(ss, category, L',');
-                getline(ss, comment, L',');
-                transactions.push_back({ to_string(date), isIncome == L"1", stof(to_string(amount)), to_string(category), to_string(comment) });
+                stringstream ss(line);
+                string date, isIncome, amount, category, comment;
+                getline(ss, date, ',');
+                getline(ss, isIncome, ',');
+                getline(ss, amount, ',');
+                getline(ss, category, ',');
+                getline(ss, comment, ',');
+                transactions.push_back({ date, isIncome == "1", stof(amount), category, comment });
             }
             transactionsFile.close();
         }
@@ -364,23 +367,21 @@ private:
             settingsFile.close();
         }
 
-        // Сохранение категорий
-        wofstream categoriesFile("data/categories.csv");
-        categoriesFile.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
+        // Сохранение категорий (упрощенная версия без codecvt)
+        ofstream categoriesFile("data/categories.csv");
         if (categoriesFile.is_open()) {
             for (const auto& c : categories) {
-                categoriesFile << to_wstring(c.name) << L"," << c.limit << L"," << c.transactionCount << L"\n";
+                categoriesFile << c.name << "," << c.limit << "," << c.transactionCount << "\n";
             }
             categoriesFile.close();
         }
 
-        // Сохранение транзакций
-        wofstream transactionsFile("data/transactions.csv");
-        transactionsFile.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
+        // Сохранение транзакций (упрощенная версия без codecvt)
+        ofstream transactionsFile("data/transactions.csv");
         if (transactionsFile.is_open()) {
             for (const auto& t : transactions) {
-                transactionsFile << to_wstring(t.date) << L"," << (t.isIncome ? L"1" : L"0") << L"," << t.amount << L","
-                    << to_wstring(t.category) << L"," << to_wstring(t.comment) << L"\n";
+                transactionsFile << t.date << "," << (t.isIncome ? "1" : "0") << "," << t.amount << ","
+                    << t.category << "," << t.comment << "\n";
             }
             transactionsFile.close();
         }
@@ -478,9 +479,9 @@ int main() {
         }
     }
     catch (const exception& e) {
-        wofstream logFile("error.log");
-        logFile.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
-        logFile << L"Ошибка: " << to_wstring(e.what()) << L"\n";
+        // Используем обычный файл вместо широкого
+        ofstream logFile("error.log");
+        logFile << "Ошибка: " << e.what() << "\n";
         logFile.close();
         return 1;
     }
