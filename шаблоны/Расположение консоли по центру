@@ -1,0 +1,20 @@
+#include <windows.h>
+#include <iostream>
+
+int main() {
+    setlocale(LC_ALL, "RU");
+    HWND consoleWindow = GetConsoleWindow();
+    RECT screenRect;
+    GetWindowRect(GetDesktopWindow(), &screenRect);
+    int screenWidth = screenRect.right;
+    int screenHeight = screenRect.bottom;
+    int windowWidth = 1200; // Ширина окна
+    int windowHeight = 600; // Высота окна
+    int x = (screenWidth - windowWidth) / 2; // Горизонтальное положение (центр)
+    int y = (screenHeight - windowHeight) / 2; // Вертикальное положение (центр)
+    MoveWindow(consoleWindow, x, y, windowWidth, windowHeight, TRUE);
+
+    std::cout << "Окно консоли расположено по центру." << std::endl;
+
+    return 0;
+}
