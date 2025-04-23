@@ -53,23 +53,58 @@ static double input_check(string message, double min, double max) {
 }
 
 // Задание 1
-// Проверка файла на существование и содержимое
+// Функция записи данных в файл
+void createFile(const string& fileName, bool isBinary) {
+    ofstream file_out;
+    if (isBinary) {
+        file_out.open(fileName, ios::binary);
+    }
+    else {
+        file_out.open(fileName);
+    }
+
+    if (!file_out.is_open()) {
+        cerr << "Ошибка: не удалось создать файл \"" << fileName << "\"!" << endl;
+        return;
+    }
+
+    cout << "Введите числа для записи в файл \"" << fileName << "\" через пробел, затем нажмите Enter:" << endl;
+
+    string input;
+    getline(cin, input); // Читаем всю строку, введённую пользователем
+
+    stringstream ss(input); // Преобразуем строку в поток
+    int num;
+    while (ss >> num) { // Читаем числа из потока
+        if (isBinary) {
+            file_out.write(reinterpret_cast<const char*>(&num), sizeof(num));
+        }
+        else {
+            file_out << num << " ";
+        }
+    }
+
+    file_out.close();
+    cout << "Файл \"" << fileName << "\" успешно создан.\n" << endl;
+}
+
+// Проверка существования файла
 static bool checkFile(const string& inputFile, bool isBinary) {
     ifstream file_in;
-
-    if (isBinary)
+    if (isBinary) {
         file_in.open(inputFile, ios::binary);
-    else
+    }
+    else {
         file_in.open(inputFile);
+    }
 
     if (!file_in.is_open()) {
-        cout << "Ошибка: файл \"" << inputFile << "\" не найден." << endl;
+        cerr << "Ошибка: файл \"" << inputFile << "\" не найден.\n\n";
         return false;
     }
 
-    file_in.peek();
-    if (file_in.tellg() == 0) {
-        cout << "Файл \"" << inputFile << "\" пуст." << endl;
+    if (file_in.peek() == EOF) {
+        cerr << "Ошибка: файл \"" << inputFile << "\" пуст.\n\n";
         return false;
     }
 
@@ -77,6 +112,7 @@ static bool checkFile(const string& inputFile, bool isBinary) {
     return true;
 }
 
+// Основная функция обработки файла
 void parityNumbers(const string& inputFile, const string& outputFile, bool isBinary) {
     if (!checkFile(inputFile, isBinary)) return;
 
@@ -95,37 +131,37 @@ void parityNumbers(const string& inputFile, const string& outputFile, bool isBin
     vector<int> numbers, chet, nechet;
     int num;
 
-    // Чтение чисел из файла
+    cout << "Содержимое файла \"" << inputFile << "\": ";
     if (isBinary) {
         while (file_in.read(reinterpret_cast<char*>(&num), sizeof(num))) {
+            cout << num << " ";
             numbers.push_back(num);
-            if (num % 2 == 0) chet.push_back(num);
-            else nechet.push_back(num);
+            (num % 2 == 0 ? chet : nechet).push_back(num);
         }
     }
     else {
         while (file_in >> num) {
+            cout << num << " ";
             numbers.push_back(num);
-            if (num % 2 == 0) chet.push_back(num);
-            else nechet.push_back(num);
+            (num % 2 == 0 ? chet : nechet).push_back(num);
         }
     }
+    cout << endl;
 
     file_in.close();
 
-    // Формирование правильного порядка с чередованием
     vector<int> result;
     size_t chetIndex = 0, nechetIndex = 0;
-    bool flagChet = !numbers.empty() && numbers[0] % 2 == 0;
+    bool insertChet = !numbers.empty() && numbers[0] % 2 == 0;
 
     while (chetIndex < chet.size() || nechetIndex < nechet.size()) {
-        if (flagChet && chetIndex < chet.size()) {
+        if (insertChet && chetIndex < chet.size()) {
             result.push_back(chet[chetIndex++]);
-            flagChet = false;
+            insertChet = false;
         }
-        else if (!flagChet && nechetIndex < nechet.size()) {
+        else if (!insertChet && nechetIndex < nechet.size()) {
             result.push_back(nechet[nechetIndex++]);
-            flagChet = true;
+            insertChet = true;
         }
         else if (chetIndex < chet.size()) {
             result.push_back(chet[chetIndex++]);
@@ -135,25 +171,24 @@ void parityNumbers(const string& inputFile, const string& outputFile, bool isBin
         }
     }
 
-    // Запись результата в файл
     if (isBinary) {
-        for (int r : result)
+        for (int r : result) {
             file_out.write(reinterpret_cast<const char*>(&r), sizeof(r));
+        }
     }
     else {
-        for (int r : result)
+        for (int r : result) {
             file_out << r << " ";
+        }
     }
 
     file_out.close();
 
-    cout << "Файл " << outputFile << " создан.\n";
+    cout << "Файл \"" << outputFile << "\" успешно создан." << endl;
 
-    // Вывод содержимого файла (и для текстового, и для бинарного)
-    ifstream checkFile(isBinary ? ifstream(outputFile, ios::binary) : ifstream(outputFile));
+    ifstream checkFile(outputFile, isBinary ? ios::binary : ios::in);
 
-    cout << "Содержимое файла " << outputFile << ": ";
-
+    cout << "Содержимое файла \"" << outputFile << "\": ";
     if (isBinary) {
         while (checkFile.read(reinterpret_cast<char*>(&num), sizeof(num))) {
             cout << num << " ";
@@ -167,7 +202,6 @@ void parityNumbers(const string& inputFile, const string& outputFile, bool isBin
 
     checkFile.close();
     cout << endl;
-}
 
 // Задание 2
 struct Student {
@@ -345,11 +379,11 @@ static void redactStudent(const string& filename) {
     }
     file.close();
 
-    if (check_fio) { 
-        cout << "Запись обновлена!\n"; 
+    if (check_fio) {
+        cout << "Запись обновлена!\n";
     }
-    else { 
-        cout << "Студент \"" << nameForRedact << "\" не найден!\n"; 
+    else {
+        cout << "Студент \"" << nameForRedact << "\" не найден!\n";
         return;
     }
 
@@ -555,28 +589,26 @@ void menu() {
             while (true) {
                 cout << "Выберите тип файла (txt/bin): ";
                 cin >> fileType;
+                cin.ignore();
 
                 if (fileType == "txt") {
                     isBinary = false;
+                    inputFile = "f.txt";
+                    outputFile = "g.txt";
                     break;
                 }
                 else if (fileType == "bin") {
                     isBinary = true;
+                    inputFile = "f.bin";
+                    outputFile = "g.bin";
                     break;
                 }
                 else {
                     cout << "Ошибка: введите 'txt' или 'bin'.\n";
                 }
             }
-            if (isBinary) {
-                inputFile = "f.bin";
-                outputFile = "g.bin";
-            }
-            else {
-                inputFile = "f.txt";
-                outputFile = "g.txt";
-            }
 
+            createFile(inputFile, isBinary);
             parityNumbers(inputFile, outputFile, isBinary);
             break;
         case 2:
