@@ -1,3 +1,184 @@
+КОД КОТОРЫЙ НАДО ПЕРЕДЕЛАТЬ
+masm
+.model small
+.386
+.stack 128
+
+.data
+    sign db ?
+    X dw ?
+    Y dw ?
+    F dw ?
+    msgX db 'Input X: $'
+    msgY db 'Input Y: $'
+    error_msg db 'Error number!', 10, 13, '$'
+    msgFormula db 'F = (Y * 32) % X / 22', 10, 13, '$'
+    msgResult db 'Result: $'
+    msgChet db 10, 13,'Chetnoe', 10, 13, '$'
+    msgNechet db 10, 13,'Nechetnoe', 10, 13, '$'
+    msgPositive db 'Positive$'
+    msgNegative db 'Negative$'
+
+.code
+InputNumber proc
+    jmp input_start
+input_error:
+    mov dx, offset error_msg
+    mov ah, 09h
+    int 21h
+    ret
+input_start:
+    xor bx, bx
+    mov sign, 0
+    mov ah, 01h
+    int 21h
+    cmp al, '-'
+    jne check_first_num
+    mov sign, 1
+    mov ah, 01h
+    int 21h
+check_first_num:
+    cmp al, '0'
+    jb input_error
+    cmp al, '9'
+    ja input_error
+coninput:
+    sub al, 30h
+    mov bl, al
+    mov dx, 10
+Input:
+    mov ah, 01h
+    int 21h
+    cmp al, 0Dh
+    je EndPrint
+    cmp al, '0'
+    jb input_error
+    cmp al, '9'
+    ja input_error
+    sub al, 30h
+    mov cl, al
+    mov ax, bx
+    imul dx
+    add ax, cx
+    mov bx, ax
+    cbw
+    jmp Input
+EndPrint:
+    cmp sign, 1
+    jne check_positive
+    cmp bx, 32768
+    ja input_error
+    neg bx
+    jmp final
+check_positive:
+    cmp bx, 32767
+    ja input_error
+final:
+    mov cx, bx
+    ret
+InputNumber endp
+
+OutputNumber proc
+    cmp ax, 0
+    jns Positive
+    push ax
+    mov dl, '-'
+    mov ah, 02h
+    int 21h
+    pop ax
+    neg ax
+Positive:
+    mov bx, 10
+    xor cx, cx
+ConvertLoop:
+    xor dx, dx
+    div bx
+    push dx
+    inc cx
+    cmp ax, 0
+    jnz ConvertLoop
+PrintLoop:
+    pop dx
+    cmp dx, 10
+    je exit
+    add dl, '0'
+    mov ah, 02h
+    int 21h
+    loop PrintLoop
+    ret
+OutputNumber endp
+
+start:
+    mov ax, @data
+    mov ds, ax
+    
+    mov dx, offset msgFormula
+    mov ah, 09h
+    int 21h
+Input_Y:
+    mov dx, offset msgY
+    mov ah, 09h
+    int 21h
+    call InputNumber
+    mov Y, cx
+Input_X:
+    mov dx, offset msgX
+    mov ah, 09h
+    int 21h
+    call InputNumber
+    mov X, cx
+    cmp cx, 0
+    jne Primer
+    mov dx, offset error_msg
+    mov ah, 09h
+    int 21h
+    jmp Input_X 
+Primer: 
+    mov ax, Y
+    shl ax, 5
+    cwd
+    idiv X  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    mov ax, dx    
+    shr ax, 4
+    mov cx, ax
+    shr ax, 5
+    sub cx, ax
+    shr ax, 6
+    add ax, cx
+    mov F, ax
+    
+Print_res:
+    mov dx, offset msgResult
+    mov ah, 09h
+    int 21h
+    mov ax, F
+    call OutputNumber    
+Check_parity:
+    shr F, 1  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; log comand
+    jnc PrintChet
+    mov dl, offset msgNechet
+    jmp PrintMessage
+PrintChet:
+    mov dl, offset msgChet
+PrintMessage:
+    mov ah, 09h
+    int 21h
+
+    cmp sign, 1   ;;;;;;;;;;;;;;;;;;; log comand
+    je PrintNegative
+    mov dx, offset msgPositive
+    jmp PrintMessageEnd
+PrintNegative:
+    mov dx, offset msgNegative
+PrintMessageEnd:
+    mov ah, 09h
+    int 21h
+Exit:
+    mov ax, 4C00h
+    int 21h
+end start
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 .model small
 .386
 .stack 128
