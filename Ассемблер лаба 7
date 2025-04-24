@@ -1,1 +1,79 @@
+masm
+.model small
+.386
+.stack 100h
 
+.data
+    len equ 10
+    mas dd 10, -10, 0, -50, 70, 0, 20, 0, -100, 25060
+    rez dd 0
+    path db 'result.txt', 0
+    desc dw 0
+    buffer db 12 dup('$')
+
+.code
+start:
+    mov ax, @data
+    mov ds, ax
+
+    mov cx, len         ; CX = количество элементов (len)
+    xor si, si          ; Обнуляем индекс массива
+    xor ebx, ebx        ; сумма
+cycl:
+    mov eax, mas[si]    ; Загружаем текущий элемент массива
+    cmp eax, 0          ; Сравниваем с нулем
+    je next             ; Если равен нулю, переходим к next
+    add ebx, eax
+next:
+    add si, 4
+    loop cycl           ; Цикл: уменьшаем CX и если не ноль, переходим к cycl
+    mov rez, ebx
+
+    ; Создаем файл
+    mov ah, 3Ch
+    lea dx, path        ; Загружаем адрес
+    xor cx, cx
+    int 21h
+    jc exit             ; Если ошибка (флаг переноса установлен), переходим на exit
+    mov desc, ax        ; Сохраняем дескриптор файла
+
+    mov eax, rez
+    mov di, offset buffer  ; Загружаем адрес буфера в DI
+    cmp eax, 0             ; Проверяем, является ли число положительным
+    jg positive            ; Если число > 0, переходим к positive
+    neg eax                ; Иначе делаем положительным
+    mov byte ptr [di], '-' ; Записываем знак минус в буфер
+    inc di                 ; Увеличиваем указатель буфера
+positive:
+    mov ebx, 10
+    xor cx, cx
+convert:
+    xor edx, edx
+    div ebx             ; Делим EAX на 10, результат в EAX, остаток в EDX
+    add dl, '0'         ; Преобразуем остаток в символ цифры
+    push dx
+    inc cx
+    cmp eax, 0
+    jne convert
+store:
+    pop dx
+    mov [di], dl
+    inc di              ; Увеличиваем указатель буфера
+    loop store          ; Цикл по счетчику CX
+
+    ; Запись в файл
+    mov ah, 40h
+    mov bx, desc                ; Загружаем дескриптор файла в BX
+    mov dx, offset buffer       ; Адрес буфера в DX
+    mov cx, di                  ; Вычисляем длину записываемых данных (DI - начало буфера)
+    sub cx, offset buffer
+    int 21h
+
+    ; Закрытие файла
+    mov ah, 3Eh
+    mov bx, desc ; Дескриптор файла в BX
+    int 21h
+exit:
+    mov ax, 4C00h
+    int 21h
+end start
