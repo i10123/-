@@ -1,1 +1,341 @@
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
 
+using namespace std;
+
+static int input_check(string message, int min, int max) {
+    int input;
+    while (true) {
+        cout << message;
+        cin >> input;
+
+        if (cin.fail() || input < min || input > max) {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка ввода! Пожалуйста, введите число от " << min << " до " << max << "." << endl;
+        }
+        else {
+            return input;
+        }
+    }
+}
+
+// Задание 1
+struct Node {
+    int x, y;
+    int cost;
+    int heuristic;
+    pair<int, int> parent;
+
+    bool operator>(const Node& other) const {
+        return (cost + heuristic) > (other.cost + other.heuristic);
+    }
+};
+static int calculateHeuristic(int x1, int y1, int x2, int y2) {
+    return abs(x1 - x2) + abs(y1 - y2);
+}
+static void printMatrix(const vector<vector<int>>& matrix) {
+    cout << "Матрица высот:\n";
+    for (const auto& row : matrix) {
+        for (int val : row) {
+            cout << val << "\t";
+        }
+        cout << endl;
+    }
+}
+static vector<pair<int, int>> reconstructPath(vector<vector<pair<int, int>>>& parents, pair<int, int> start, pair<int, int> goal, vector<vector<int>>& terrain, int& totalDistance) {
+    vector<pair<int, int>> path;
+    pair<int, int> current = goal;
+    totalDistance = 0;
+
+    while (current != start) {
+        path.push_back(current);
+        pair<int, int> prev = parents[current.first][current.second];
+        totalDistance += abs(terrain[current.first][current.second] - terrain[prev.first][prev.second]) + 1;
+        current = prev;
+    }
+    path.push_back(start);
+    reverse(path.begin(), path.end());
+
+    return path;
+}
+static vector<pair<int, int>> findPath(vector<vector<int>>& terrain, pair<int, int> start, pair<int, int> goal, int& totalDistance) {
+    int n = terrain.size();
+    priority_queue<Node, vector<Node>, greater<Node>> pq;
+    pq.push({ start.first, start.second, 0, calculateHeuristic(start.first, start.second, goal.first, goal.second), {-1, -1} });
+
+    vector<vector<int>> visited(n, vector<int>(n, false));
+    vector<vector<pair<int, int>>> parents(n, vector<pair<int, int>>(n, { -1, -1 }));
+    visited[start.first][start.second] = true;
+
+    vector<pair<int, int>> directions = { {0, 1}, {1, 0}, {0, -1}, {-1, 0} };
+
+    while (!pq.empty()) {
+        Node current = pq.top();
+        pq.pop();
+
+        if (current.x == goal.first && current.y == goal.second) {
+            return reconstructPath(parents, start, goal, terrain, totalDistance);
+        }
+
+        for (auto [dx, dy] : directions) {
+            int nx = current.x + dx, ny = current.y + dy;
+
+            if (nx >= 0 && ny >= 0 && nx < n && ny < n && !visited[nx][ny]) {
+                int new_cost = current.cost + abs(terrain[nx][ny] - terrain[current.x][current.y]) + 1;
+                pq.push({ nx, ny, new_cost, calculateHeuristic(nx, ny, goal.first, goal.second), {current.x, current.y} });
+                visited[nx][ny] = true;
+                parents[nx][ny] = { current.x, current.y };
+            }
+        }
+    }
+
+    return {};
+}
+static void task1() {
+    srand(time(0)); // Инициализируем генератор случайных чисел
+
+    int n;
+    cout << "Введите размер матрицы: ";
+    cin >> n;
+
+    vector<vector<int>> terrain(n, vector<int>(n));
+
+    char choice;
+    cout << "Заполнить матрицу вручную (W) или случайными числами (R)? ";
+    cin >> choice;
+
+    if (choice == 'R' || choice == 'r') {
+        int min_val, max_val;
+        cout << "Введите минимальное значение: ";
+        cin >> min_val;
+        cout << "Введите максимальное значение: ";
+        cin >> max_val;
+
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                terrain[i][j] = min_val + rand() % (max_val - min_val + 1);
+    }
+    else {
+        cout << "Введите высоты каждого квадрата:\n";
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++) {
+                cout << "Введите [" << i + 1 << "][" << j + 1 << "]: ";
+                cin >> terrain[i][j];
+            }
+    }
+
+    // Вывод матрицы после заполнения
+    printMatrix(terrain);
+
+    pair<int, int> start, goal;
+    cout << "Введите координаты начала:\n";
+    cout << "Введите X: ";
+    cin >> start.first;
+    cout << "Введите Y: ";
+    cin >> start.second;
+    start.first--; start.second--; // Преобразуем в индексы массива
+
+    cout << "Введите координаты цели:\n";
+    cout << "Введите X: ";
+    cin >> goal.first;
+    cout << "Введите Y: ";
+    cin >> goal.second;
+    goal.first--; goal.second--; // Преобразуем в индексы массива
+
+    int totalDistance = 0;
+    vector<pair<int, int>> path = findPath(terrain, start, goal, totalDistance);
+
+    if (!path.empty()) {
+        cout << "Путь:\n";
+        for (auto [x, y] : path) {
+            cout << "[" << x + 1 << "][" << y + 1 << "] -> ";
+        }
+        cout << "Цель\n";
+        cout << "Общее расстояние: " << totalDistance << endl << endl;
+    }
+    else {
+        cout << "Путь не найден.\n\n";
+    }
+}
+// Задание 2
+// Генерация случайного массива
+static vector<int> generateRandomArray(int n, int start_range, int end_range) {
+    vector<int> arr(n);
+    for (int i = 0; i < n; i++) {
+        arr[i] = start_range + rand() % (end_range - start_range + 1);
+    }
+    return arr;
+}
+// Вывод массива
+static void printArray(const vector<int>& arr, const string& message) {
+    cout << message << ": ";
+    for (int num : arr) {
+        cout << num << " ";
+    }
+    cout << endl;
+}
+// Нахождение наибольшей строго возрастающей подпоследовательности
+vector<int> findLIS(const vector<int>& arr) {
+    int n = arr.size();
+    if (n == 0) return {};
+
+    vector<int> dp(n, 1), prev(n, -1);
+    int max_length = 0, last_index = -1;
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < i; j++) {
+            if (arr[j] < arr[i] && dp[i] < dp[j] + 1) {
+                dp[i] = dp[j] + 1;
+                prev[i] = j;
+            }
+        }
+        if (dp[i] > max_length) {
+            max_length = dp[i];
+            last_index = i;
+        }
+    }
+
+    vector<int> lis;
+    while (last_index != -1) {
+        lis.push_back(arr[last_index]);
+        last_index = prev[last_index];
+    }
+    reverse(lis.begin(), lis.end());
+
+    return lis;
+}
+// Нахождение возрастающей подпоследовательности с разрывами
+static vector<int> findLISWithGaps(const vector<int>& arr, int m) {
+    int n = arr.size();
+    if (n == 0) return {};
+
+    vector<int> dp(n, 1), prev(n, -1);
+    int max_length = 0, last_index = -1;
+
+    for (int i = 0; i < n; i++) {
+        int gaps_used = 0;
+        for (int j = 0; j < i; j++) {
+            if (arr[j] < arr[i] || (gaps_used < m)) {
+                if (dp[i] < dp[j] + 1) {
+                    dp[i] = dp[j] + 1;
+                    prev[i] = j;
+                    gaps_used++;
+                }
+            }
+        }
+        if (dp[i] > max_length) {
+            max_length = dp[i];
+            last_index = i;
+        }
+    }
+
+    vector<int> lis;
+    while (last_index != -1) {
+        lis.push_back(arr[last_index]);
+        last_index = prev[last_index];
+    }
+    reverse(lis.begin(), lis.end());
+
+    return lis;
+}
+// Задание 2а
+static void task2a() {
+    srand(time(0));
+
+    int n, start_range, end_range;
+    cout << "Введите количество элементов массива: ";
+    cin >> n;
+    cout << "Введите начало диапазона: ";
+    cin >> start_range;
+    cout << "Введите конец диапазона: ";
+    cin >> end_range;
+
+    vector<int> arr = generateRandomArray(n, start_range, end_range);
+    printArray(arr, "Сгенерированный массив");
+
+    vector<int> lis = findLIS(arr);
+    printArray(lis, "Наибольшая строго возрастающая подпоследовательность");
+
+    cout << "Минимальное количество вычеркнутых элементов: " << (n - lis.size()) << endl;
+}
+// Задание 2б
+static void task2b() {
+    srand(time(0));
+
+    int n, start_range, end_range;
+    cout << "Введите количество элементов массива: ";
+    cin >> n;
+    cout << "Введите начало диапазона: ";
+    cin >> start_range;
+    cout << "Введите конец диапазона: ";
+    cin >> end_range;
+
+    vector<int> arr = generateRandomArray(n, start_range, end_range);
+    printArray(arr, "Сгенерированный массив");
+
+    vector<int> lis = findLIS(arr);
+    printArray(lis, "Наибольшая строго возрастающая подпоследовательность");
+
+    cout << "Минимальное количество вычеркнутых элементов: " << (n - lis.size()) << endl;
+}
+// Задание 2в
+static void task2v() {
+    srand(time(0));
+
+    int n, start_range, end_range, m;
+    cout << "Введите количество элементов массива: ";
+    cin >> n;
+    cout << "Введите начало диапазона: ";
+    cin >> start_range;
+    cout << "Введите конец диапазона: ";
+    cin >> end_range;
+    cout << "Введите количество допустимых разрывов (m): ";
+    cin >> m;
+
+    vector<int> arr = generateRandomArray(n, start_range, end_range);
+    printArray(arr, "Сгенерированный массив");
+
+    vector<int> lis = findLISWithGaps(arr, m);
+    printArray(lis, "Наибольшая строго возрастающая подпоследовательность (с разрывами)");
+
+    cout << "Минимальное количество вычеркнутых элементов: " << (n - lis.size()) << endl;
+}
+
+int main() {
+    setlocale(LC_ALL, "RU");
+    
+    while (true) {
+        cout << "   Задачи: \n";
+        cout << "1. (№7) Найти маршрут и минимальное расстояние пути. \n";
+        cout << "2. (№22а) Вычеркнуть минимальное кол-во элементов из массива для сохранения строго возрастающей последовательности. \n";
+        cout << "3. (№22б) Вычеркнуть минимальное кол-во элементов с 'разрывом'. \n";
+        cout << "4. (№22в) Вычеркнуть минимальное кол-во элементов с m кол-вом 'разрывов'.\n";
+        cout << "0. Выход из программы. \n\n";
+
+        int n = input_check("Введите номер задачи: ", 0, 4);
+
+        switch (n) {
+        case 0:
+            cout << "Завершение программы." << endl;
+            return 0;
+        case 1:
+            task1();
+            break;
+        case 2:
+            task2a();
+            break;
+        case 3:
+            task2b();
+            break;
+        case 4:
+            task2v();
+            break;
+        }
+    }
+    return 0;
+}
