@@ -7,11 +7,18 @@
 #include <ctime>
 #include <filesystem>
 #include <locale>
+#include <windows.h>
+#include <iostream>
+#include <map>
+#include <cmath>
+#include <algorithm>
+#include <cstdlib>
+#include <clocale>
 
 using namespace std;
 namespace fs = filesystem;
 
-// Константы
+// Параметры окна
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
 const int SIDEBAR_WIDTH = 250;
@@ -20,9 +27,11 @@ const sf::Color BG_COLOR(20, 20, 20);
 const sf::Color SIDEBAR_COLOR(30, 30, 30);
 const sf::Color BUTTON_COLOR(50, 50, 50);
 const sf::Color BUTTON_HOVER_COLOR(70, 70, 70);
-const sf::Color TEXT_COLOR(200, 200, 200);
+const sf::Color TEXT_COLOR(220, 220, 220);
+const sf::Color POSITIVE_COLOR(100, 220, 100);
+const sf::Color NEGATIVE_COLOR(220, 100, 100);
 
-// Вспомогательные функции
+// получение текущей даты
 static string getCurrentDate() {
     auto now = time(nullptr);
     tm timeInfo;
@@ -32,75 +41,69 @@ static string getCurrentDate() {
     ss << put_time(&timeInfo, "%d.%m.%Y");
     return ss.str();
 }
-
+// форматирование числа с валютой
 static string formatCurrency(float amount) {
     stringstream ss;
     ss << fixed << setprecision(2) << amount;
     return ss.str() + " BYN";
 }
-
-// Упрощенные функции конвертации (без codecvt)
+// преобразование string -> wstring
 static wstring to_wstring(const string& str) {
-    wstring result;
-    result.reserve(str.size());
-    for (char c : str) {
-        result += static_cast<wchar_t>(c);
-    }
-    return result;
+    wstring wstr(str.begin(), str.end());
+    return wstr;
 }
-
+// преобразование wstring -> string
 static string to_string(const wstring& wstr) {
-    string result;
-    result.reserve(wstr.size());
-    for (wchar_t wc : wstr) {
-        result += static_cast<char>(wc);
-    }
-    return result;
+    string str(wstr.begin(), wstr.end());
+    return str;
 }
-
-// Структура для хранения данных о транзакции
+// Структура "транзакции"
+enum TransactionType { Income, Expense };
 struct Transaction {
     string date;
-    bool isIncome = true; //true or false
-    float amount = 0.0;
+    TransactionType type;
+    float amount;
     string category;
     string comment;
 };
-
-// Структура для хранения данных о категории
+// Структура "категории"
 struct Category {
     string name;
     float limit;
     int transactionCount;
 };
-
-// Структура для хранения настроек
+// Структура "настройки"
 struct Settings {
     float cardBalance;
     float cashBalance;
-    float monthlyLimit;
+    float monthLimit;
 };
-
 // Класс кнопки
 class Button {
 public:
     sf::RectangleShape shape;
     sf::Text text;
     bool isHovered;
+    bool isActive;
 
-    Button(float x, float y, float width, const string& label, sf::Font& font) {
+    Button(float x, float y, float width, const std::wstring& label, sf::Font& font) {
         shape.setPosition(x, y);
         shape.setSize(sf::Vector2f(width, BUTTON_HEIGHT));
         shape.setFillColor(BUTTON_COLOR);
 
         text.setFont(font);
-        text.setString(to_wstring(label));
+        text.setString(label);
         text.setCharacterSize(20);
         text.setFillColor(TEXT_COLOR);
+
         sf::FloatRect textBounds = text.getLocalBounds();
-        text.setPosition(x + (width - textBounds.width) / 2, y + (BUTTON_HEIGHT - textBounds.height) / 2 - 5);
+        text.setPosition(
+            x + (width - textBounds.width) / 2,
+            y + (BUTTON_HEIGHT - textBounds.height) / 2 - 5
+        );
 
         isHovered = false;
+        isActive = false;
     }
 
     bool contains(sf::Vector2f point) const {
@@ -109,9 +112,13 @@ public:
 
     void update(sf::Vector2f mousePos) {
         isHovered = contains(mousePos);
-        shape.setFillColor(isHovered ? BUTTON_HOVER_COLOR : BUTTON_COLOR);
-        float scale = isHovered ? 1.05f : 1.0f;
-        shape.setScale(scale, scale);
+
+        if (isActive) {
+            shape.setFillColor(sf::Color(150, 50, 50)); // Красный для активной кнопки
+        }
+        else {
+            shape.setFillColor(isHovered ? BUTTON_HOVER_COLOR : BUTTON_COLOR);
+        }
     }
 
     void draw(sf::RenderWindow& window) {
@@ -119,7 +126,21 @@ public:
         window.draw(text);
     }
 };
+// Функция для чтения строки с русскими символами из файла
+static string readLineWithRussian(ifstream& file) {
+    string line;
+    getline(file, line);
 
+    // Проверяем, есть ли BOM маркер (UTF-8)
+    if (line.size() >= 3 &&
+        static_cast<unsigned char>(line[0]) == 0xEF &&
+        static_cast<unsigned char>(line[1]) == 0xBB &&
+        static_cast<unsigned char>(line[2]) == 0xBF) {
+        line = line.substr(3);
+    }
+
+    return line;
+}
 // Основной класс приложения
 class FinanceApp {
 private:
@@ -137,43 +158,65 @@ private:
     sf::Text inputText;
     string inputContext;
     Button addTransactionButton;
+    vector<float> monthIncome;
+    map<string, float> monthExpense;
+    vector<float> balanceHistory;
 
 public:
     FinanceApp(sf::RenderWindow& win) : window(win), currentTab(0), isEditing(false),
-        addTransactionButton(SIDEBAR_WIDTH + 20, WINDOW_HEIGHT - 100, 200, "Добавить транзакцию", font) {
+        addTransactionButton(0, 0, 0, L"", font) { // Временная инициализация
 
-        // Загрузка шрифта с поддержкой кириллицы
+        // Загрузка шрифта
         if (!font.loadFromFile("arial.ttf")) {
             if (!font.loadFromFile("C:/Windows/Fonts/arial.ttf")) {
-                throw runtime_error("Не удалось загрузить шрифт");
+                MessageBoxW(NULL, L"Не удалось загрузить шрифт", L"Ошибка", MB_ICONERROR);
+                throw runtime_error("Failed to load font");
             }
         }
 
+        // Инициализация кнопки после загрузки шрифта
+        addTransactionButton = Button(SIDEBAR_WIDTH + 20, WINDOW_HEIGHT - 100, 200, L"Добавить транзакцию", font);
+
+        // Создаём кнопки с русским текстом
+        vector<wstring> buttonLabels = {
+            L"Главная", L"Статистика", L"Транзакции", L"Категории", L"Настройки"
+        };
+
+        for (size_t i = 0; i < buttonLabels.size(); i++) {
+            sidebarButtons.emplace_back(
+                10,
+                10 + i * (BUTTON_HEIGHT + 10),
+                SIDEBAR_WIDTH - 20,
+                buttonLabels[i],
+                font
+            );
+        }
+
+        // Настройка боковой панели
         sidebar.setSize(sf::Vector2f(SIDEBAR_WIDTH, WINDOW_HEIGHT));
         sidebar.setFillColor(SIDEBAR_COLOR);
 
-        vector<string> buttonLabels = { "Главная", "Статистика", "Транзакции", "Категории", "Настройки" };
-        for (size_t i = 0; i < buttonLabels.size(); ++i) {
-            sidebarButtons.emplace_back(10, 10 + i * (BUTTON_HEIGHT + 10), SIDEBAR_WIDTH - 20, buttonLabels[i], font);
-        }
-
+        // Настройка текста
         contentText.setFont(font);
         contentText.setCharacterSize(20);
         contentText.setFillColor(TEXT_COLOR);
         contentText.setPosition(SIDEBAR_WIDTH + 20, 20);
 
+        // Настройка поля ввода
         inputText.setFont(font);
         inputText.setCharacterSize(20);
         inputText.setFillColor(TEXT_COLOR);
         inputText.setPosition(SIDEBAR_WIDTH + 20, WINDOW_HEIGHT - 50);
 
-        addTransactionButton = Button(SIDEBAR_WIDTH + 20, WINDOW_HEIGHT - 100, 200, "Добавить транзакцию", font);
-
-        settings = { 0.0f, 0.0f, 10000.0f };
-
-        // ✅ Использование fs вместо filesystem
+        // Начальные настройки
+        settings = { 0.0f, 0.0f, 0.0f };
         fs::create_directory("data");
 
+        if (!sidebarButtons.empty()) {
+            sidebarButtons[0].isActive = true;
+        }
+
+        // Загрузка данных
         loadData();
     }
 
@@ -192,9 +235,16 @@ public:
             }
             else if (event.type == sf::Event::MouseButtonPressed) {
                 sf::Vector2f mousePos = window.mapPixelToCoords(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
-                for (size_t i = 0; i < sidebarButtons.size(); ++i) {
+                for (size_t i = 0; i < sidebarButtons.size(); i++) {
                     if (sidebarButtons[i].contains(mousePos)) {
+                        // Сбрасываем активное состояние всех кнопок
+                        for (auto& btn : sidebarButtons) {
+                            btn.isActive = false;
+                        }
+                        // Устанавливаем активное состояние только для нажатой кнопки
+                        sidebarButtons[i].isActive = true;
                         currentTab = i;
+                        break;
                     }
                 }
                 if (currentTab == 2 && addTransactionButton.contains(mousePos)) {
@@ -206,7 +256,7 @@ public:
                 else if (currentTab == 4 && contentText.getGlobalBounds().contains(mousePos)) {
                     startInput("update_settings");
                 }
-            }
+            } // Добавлена закрывающая скобка
             else if (event.type == sf::Event::TextEntered && isEditing) {
                 if (event.text.unicode == 8 && !inputBuffer.empty()) {
                     inputBuffer.pop_back();
@@ -220,16 +270,31 @@ public:
                 }
                 inputText.setString(to_wstring(inputBuffer));
             }
+            else if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Escape && isEditing) {
+                    isEditing = false;
+                    inputBuffer.clear();
+                    inputText.setString(L"");
+                }
+            }
         }
     }
 
     void update() {
-        // Логика обновления
+        sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+        for (auto& button : sidebarButtons) {
+            button.update(mousePos);
+        }
+        addTransactionButton.update(mousePos);
+
+        updateStatistics();
+        saveData();
     }
 
     void render() {
         window.clear(BG_COLOR);
         window.draw(sidebar);
+
         for (auto& button : sidebarButtons) {
             button.draw(window);
         }
@@ -249,139 +314,503 @@ public:
         window.display();
     }
 
-private:
-    void renderHome() {
-        wstringstream ss;
-        ss << L"Дата: " << to_wstring(getCurrentDate()) << L"\n";
-        ss << L"Общий баланс: " << to_wstring(formatCurrency(settings.cardBalance + settings.cashBalance)) << L"\n";
-        ss << L"Баланс карты: " << to_wstring(formatCurrency(settings.cardBalance)) << L"\n";
-        ss << L"Наличные: " << to_wstring(formatCurrency(settings.cashBalance)) << L"\n";
-        ss << L"Лимит: " << to_wstring(formatCurrency(settings.monthlyLimit)) << L"\n";
-        ss << L"\nПоследние транзакции:\n";
-        size_t count = min(transactions.size(), size_t(5));
-        for (size_t i = 0; i < count; ++i) {
-            auto& t = transactions[transactions.size() - 1 - i];
-            ss << to_wstring(t.date) << L" | " << (t.isIncome ? L"Доход" : L"Расход") << L" | "
-                << to_wstring(formatCurrency(t.amount)) << L" | " << to_wstring(t.category) << L"\n";
-        }
-        contentText.setString(ss.str());
-        window.draw(contentText);
-    }
-
-    void renderStatistics() {
-        contentText.setString(L"Статистика\n(Графики будут реализованы с использованием примитивов SFML)");
-        window.draw(contentText);
-    }
-
-    void renderTransactions() {
-        wstringstream ss;
-        ss << L"Транзакции:\n";
-        for (const auto& t : transactions) {
-            ss << to_wstring(t.date) << L" | " << (t.isIncome ? L"Доход" : L"Расход") << L" | "
-                << to_wstring(formatCurrency(t.amount)) << L" | " << to_wstring(t.category) << L" | " << to_wstring(t.comment) << L"\n";
-        }
-        ss << L"\nВведите новую транзакцию (формат: доход/расход,сумма,категория,комментарий):";
-        contentText.setString(ss.str());
-        window.draw(contentText);
-        addTransactionButton.draw(window);
-    }
-
-    void renderCategories() {
-        wstringstream ss;
-        ss << L"Категории:\n";
-        for (const auto& c : categories) {
-            ss << to_wstring(c.name) << L" | Лимит: " << to_wstring(formatCurrency(c.limit))
-                << L" | Транзакций: " << c.transactionCount << L"\n";
-        }
-        ss << L"\nВведите новую категорию (формат: название,лимит):";
-        contentText.setString(ss.str());
-        window.draw(contentText);
-    }
-
-    void renderSettings() {
-        wstringstream ss;
-        ss << L"Настройки\n";
-        ss << L"Баланс карты: " << to_wstring(formatCurrency(settings.cardBalance)) << L"\n";
-        ss << L"Наличные: " << to_wstring(formatCurrency(settings.cashBalance)) << L"\n";
-        ss << L"Месячный лимит: " << to_wstring(formatCurrency(settings.monthlyLimit)) << L"\n";
-        ss << L"\nО программе:\n";
-        ss << L"Учет домашних финансов\nВерсия 1.0\nРазработчик: А. Б.\n2025";
-        ss << L"\nВведите новые настройки (формат: карта,наличные,лимит):";
-        contentText.setString(ss.str());
-        window.draw(contentText);
-    }
-
-    void loadData() {
-        // Загрузка настроек
-        ifstream settingsFile("data/settings.csv");
+    void saveData() {
+        // Сохранение настроек
+        ofstream settingsFile("data/settings.txt");
         if (settingsFile.is_open()) {
-            string line;
-            if (getline(settingsFile, line)) {
-                stringstream ss(line);
-                string token;
-                getline(ss, token, ','); settings.cardBalance = stof(token);
-                getline(ss, token, ','); settings.cashBalance = stof(token);
-                getline(ss, token, ','); settings.monthlyLimit = stof(token);
-            }
+            settingsFile << "card " << settings.cardBalance << "\n";
+            settingsFile << "cash " << settings.cashBalance << "\n";
+            settingsFile << "limit " << settings.monthLimit << "\n";
             settingsFile.close();
         }
 
-        // Загрузка категорий (упрощенная версия без codecvt)
-        ifstream categoriesFile("data/categories.csv");
+        // Сохранение категорий в UTF-8
+        ofstream categoriesFile("data/categories.txt", ios::binary);
         if (categoriesFile.is_open()) {
-            string line;
-            while (getline(categoriesFile, line)) {
-                stringstream ss(line);
-                string name, limit, count;
-                getline(ss, name, ',');
-                getline(ss, limit, ',');
-                getline(ss, count, ',');
-                categories.push_back({ name, stof(limit), stoi(count) });
+            // Записываем UTF-8 BOM маркер
+            categoriesFile << "\xEF\xBB\xBF";
+            for (const auto& c : categories) {
+                categoriesFile << c.name << " " << c.limit << " " << c.transactionCount << "\n";
             }
             categoriesFile.close();
         }
 
-        // Загрузка транзакций (упрощенная версия без codecvt)
-        ifstream transactionsFile("data/transactions.csv");
+        // Сохранение транзакций в UTF-8
+        ofstream transactionsFile("data/transactions.txt", ios::binary);
         if (transactionsFile.is_open()) {
-            string line;
-            while (getline(transactionsFile, line)) {
-                stringstream ss(line);
-                string date, isIncome, amount, category, comment;
-                getline(ss, date, ',');
-                getline(ss, isIncome, ',');
-                getline(ss, amount, ',');
-                getline(ss, category, ',');
-                getline(ss, comment, ',');
-                transactions.push_back({ date, isIncome == "1", stof(amount), category, comment });
+            // Записываем UTF-8 BOM маркер
+            transactionsFile << "\xEF\xBB\xBF";
+            for (const auto& t : transactions) {
+                string transactionType = (t.type == Income) ? "income" : "expense";
+                transactionsFile << t.date << " " << transactionType << " " << t.amount << " "
+                    << t.category << " " << t.comment << "\n";
             }
             transactionsFile.close();
         }
     }
 
-    void saveData() {
-        // Сохранение настроек
-        ofstream settingsFile("data/settings.csv");
+private:
+    void renderHome() {
+        float totalBalance = settings.cardBalance + settings.cashBalance;
+        float totalExpenses = calculateTotalExpenses();
+        float totalIncome = calculateTotalIncome();
+
+        // Основной заголовок
+        sf::Text header;
+        header.setFont(font);
+        header.setString(L"ОБЩИЙ БАЛАНС: " + to_wstring(formatCurrency(totalBalance)));
+        header.setCharacterSize(36);
+        header.setFillColor(totalBalance >= 0 ? POSITIVE_COLOR : NEGATIVE_COLOR);
+        header.setPosition(SIDEBAR_WIDTH + 20, 20);
+        window.draw(header);
+
+        // Левый блок с информацией
+        sf::Text leftBlockHeader;
+        leftBlockHeader.setFont(font);
+        leftBlockHeader.setString(L"");
+        leftBlockHeader.setCharacterSize(24);
+        leftBlockHeader.setFillColor(TEXT_COLOR);
+        leftBlockHeader.setPosition(SIDEBAR_WIDTH + 20, 80);
+        window.draw(leftBlockHeader);
+
+        sf::Text balancesTextLeft;
+        balancesTextLeft.setFont(font);
+        wstringstream balancesLeft;
+        balancesLeft << L"Баланс карты: " << to_wstring(formatCurrency(settings.cardBalance)) << L"";
+            balancesLeft << L"Наличные: " << to_wstring(formatCurrency(settings.cashBalance)) << L"";
+            balancesLeft << L"Доходы: " << to_wstring(formatCurrency(totalIncome)) << L"";
+            balancesTextLeft.setString(balancesLeft.str());
+        balancesTextLeft.setCharacterSize(24);
+        balancesTextLeft.setFillColor(TEXT_COLOR);
+        balancesTextLeft.setPosition(SIDEBAR_WIDTH + 20, 120);
+        window.draw(balancesTextLeft);
+
+        // Правый блок с информацией
+        sf::Text rightBlockHeader;
+        rightBlockHeader.setFont(font);
+        rightBlockHeader.setString(L"");
+        rightBlockHeader.setCharacterSize(24);
+        rightBlockHeader.setFillColor(TEXT_COLOR);
+        rightBlockHeader.setPosition(WINDOW_WIDTH / 2 + 50, 80); // Смещаем правый блок
+        window.draw(rightBlockHeader);
+
+        sf::Text balancesTextRight;
+        balancesTextRight.setFont(font);
+        wstringstream balancesRight;
+        balancesRight << L"Месячный лимит: " << to_wstring(formatCurrency(settings.monthLimit)) << L"";
+            balancesRight << L"Расходы: " << to_wstring(formatCurrency(totalExpenses)) << L"";
+            balancesTextRight.setString(balancesRight.str());
+        balancesTextRight.setCharacterSize(24);
+        balancesTextRight.setFillColor(TEXT_COLOR);
+        balancesTextRight.setPosition(WINDOW_WIDTH / 2 + 50, 120);
+        window.draw(balancesTextRight);
+
+        // Последние транзакции
+        sf::Text transactionsHeader;
+        transactionsHeader.setFont(font);
+        transactionsHeader.setString(L"Последние транзакции:");
+        transactionsHeader.setCharacterSize(24);
+        transactionsHeader.setFillColor(TEXT_COLOR);
+        transactionsHeader.setPosition(SIDEBAR_WIDTH + 20, 250);
+        window.draw(transactionsHeader);
+
+        wstringstream transactionsText;
+        size_t count = min(transactions.size(), size_t(5));
+        for (size_t i = 0; i < count; i++) {
+            auto& t = transactions[transactions.size() - 1 - i];
+            wstring typeText = (t.type == Income) ? L"Доход" : L"Расход";
+            sf::Color amountColor = (t.type == Income) ? POSITIVE_COLOR : NEGATIVE_COLOR;
+
+            // Форматируем строку с транзакцией
+            transactionsText << to_wstring(t.date) << L" | " << typeText << L" | "
+                << to_wstring(t.category) << L" | " << to_wstring(t.comment) << L"";
+
+            // Выводим сумму отдельно, выровненную по правому краю
+            sf::Text amountText;
+            amountText.setFont(font);
+            amountText.setString(to_wstring(formatCurrency(t.amount)));
+            amountText.setFillColor(amountColor);
+            amountText.setCharacterSize(20);
+            amountText.setPosition(WINDOW_WIDTH - 200, 300 + i * 30); // Выравнивание по правому краю
+            window.draw(amountText);
+        }
+
+        sf::Text transactionsList;
+        transactionsList.setFont(font);
+        transactionsList.setString(transactionsText.str());
+        transactionsList.setCharacterSize(20);
+        transactionsList.setFillColor(TEXT_COLOR);
+        transactionsList.setPosition(SIDEBAR_WIDTH + 20, 300);
+        window.draw(transactionsList);
+
+        // Добавляем кнопки "Доход" и "Расход"
+        Button incomeButton(SIDEBAR_WIDTH + 20, WINDOW_HEIGHT - 100, (WINDOW_WIDTH - SIDEBAR_WIDTH) / 2 - 40, L"Добавить доход", font);
+        Button expenseButton(SIDEBAR_WIDTH + (WINDOW_WIDTH - SIDEBAR_WIDTH) / 2 + 20, WINDOW_HEIGHT - 100, (WINDOW_WIDTH - SIDEBAR_WIDTH) / 2 - 40, L"Добавить расход", font);
+
+        incomeButton.draw(window);
+        expenseButton.draw(window);
+    }
+
+    void renderStatistics() {
+        // Заголовок
+        sf::Text header;
+        header.setFont(font);
+        header.setString(L"СТАТИСТИКА");
+        header.setCharacterSize(36);
+        header.setFillColor(TEXT_COLOR);
+        header.setPosition(SIDEBAR_WIDTH + 20, 20);
+        window.draw(header);
+
+        // График доходов по месяцам
+        sf::Text incomeHeader;
+        incomeHeader.setFont(font);
+        incomeHeader.setString(L"Доходы по месяцам:");
+        incomeHeader.setCharacterSize(24);
+        incomeHeader.setFillColor(TEXT_COLOR);
+        incomeHeader.setPosition(SIDEBAR_WIDTH + 20, 80);
+        window.draw(incomeHeader);
+
+        if (!monthIncome.empty()) {
+            float maxIncome = *max_element(monthIncome.begin(), monthIncome.end());
+            if (maxIncome == 0) maxIncome = 1;
+
+            float barWidth = 50;
+            float startX = SIDEBAR_WIDTH + 20;
+            float startY = 150;
+            float scale = 150.0f / maxIncome;
+
+            for (size_t i = 0; i < monthIncome.size(); ++i) {
+                float height = monthIncome[i] * scale;
+                sf::RectangleShape bar(sf::Vector2f(barWidth, height));
+                bar.setPosition(startX + i * (barWidth + 20), startY + (150 - height));
+                bar.setFillColor(POSITIVE_COLOR);
+                window.draw(bar);
+
+                // Подписи месяцев
+                sf::Text monthLabel;
+                monthLabel.setFont(font);
+                monthLabel.setString(to_wstring(to_string(i + 1)));
+                monthLabel.setCharacterSize(16);
+                monthLabel.setFillColor(TEXT_COLOR);
+                monthLabel.setPosition(startX + i * (barWidth + 20) + barWidth / 2 - 5, startY + 160);
+                window.draw(monthLabel);
+
+                // Подписи значений
+                if (monthIncome[i] > 0) {
+                    sf::Text valueLabel;
+                    valueLabel.setFont(font);
+                    valueLabel.setString(to_wstring(formatCurrency(monthIncome[i])));
+                    valueLabel.setCharacterSize(12);
+                    valueLabel.setFillColor(TEXT_COLOR);
+                    valueLabel.setPosition(startX + i * (barWidth + 20) + barWidth / 2 - 20, startY + (150 - height) - 20);
+                    window.draw(valueLabel);
+                }
+            }
+        }
+
+        // Круговая диаграмма расходов
+        sf::Text expensesHeader;
+        expensesHeader.setFont(font);
+        expensesHeader.setString(L"Расходы по категориям:");
+        expensesHeader.setCharacterSize(24);
+        expensesHeader.setFillColor(TEXT_COLOR);
+        expensesHeader.setPosition(SIDEBAR_WIDTH + 500, 80);
+        window.draw(expensesHeader);
+
+        float totalExpense = 0;
+        for (const auto& [category, amount] : monthExpense) {
+            totalExpense += amount;
+        }
+
+        if (totalExpense > 0) {
+            float angleStart = 0;
+            sf::Vector2f piePos(SIDEBAR_WIDTH + 600, 200);
+            float radius = 100;
+
+            for (const auto& [category, amount] : monthExpense) {
+                float percentage = (amount / totalExpense) * 360;
+                float angleEnd = angleStart + percentage;
+
+                // Создаем сектор для круговой диаграммы
+                sf::ConvexShape sector;
+                sector.setPointCount(32);
+                sector.setPoint(0, piePos);
+
+                for (int i = 0; i <= 30; ++i) {
+                    float angle = angleStart + (angleEnd - angleStart) * (i / 30.0f);
+                    float x = piePos.x + cos(angle * 3.14159265f / 180.0f) * radius;
+                    float y = piePos.y + sin(angle * 3.14159265f / 180.0f) * radius;
+                    sector.setPoint(static_cast<size_t>(i) + 1, sf::Vector2f(x, y));
+                }
+
+                sector.setFillColor(getCategoryColor(category));
+                window.draw(sector);
+                angleStart = angleEnd;
+            }
+
+            // Легенда
+            float legendY = 350;
+            for (const auto& [category, amount] : monthExpense) {
+                float percentage = (amount / totalExpense) * 100;
+
+                sf::RectangleShape colorBox(sf::Vector2f(20, 20));
+                colorBox.setFillColor(getCategoryColor(category));
+                colorBox.setPosition(SIDEBAR_WIDTH + 500, legendY);
+                window.draw(colorBox);
+
+                sf::Text legendText;
+                legendText.setFont(font);
+                legendText.setString(to_wstring(category) + L" - " + to_wstring(formatCurrency(amount)) +
+                    L" (" + to_wstring(to_string((int)percentage)) + L"%)");
+                legendText.setCharacterSize(16);
+                legendText.setFillColor(TEXT_COLOR);
+                legendText.setPosition(SIDEBAR_WIDTH + 530, legendY);
+                window.draw(legendText);
+
+                legendY += 30;
+            }
+        }
+
+        // График динамики баланса
+        sf::Text balanceHeader;
+        balanceHeader.setFont(font);
+        balanceHeader.setString(L"Динамика баланса:");
+        balanceHeader.setCharacterSize(24);
+        balanceHeader.setFillColor(TEXT_COLOR);
+        balanceHeader.setPosition(SIDEBAR_WIDTH + 20, 350);
+        window.draw(balanceHeader);
+
+        if (!balanceHistory.empty()) {
+            float minBalance = *min_element(balanceHistory.begin(), balanceHistory.end());
+            float maxBalance = *max_element(balanceHistory.begin(), balanceHistory.end());
+            if (minBalance == maxBalance) {
+                minBalance -= 100;
+                maxBalance += 100;
+            }
+
+            float graphWidth = 800;
+            float graphHeight = 200;
+            float startX = SIDEBAR_WIDTH + 20;
+            float startY = 420;
+
+            // Оси
+            sf::VertexArray axes(sf::Lines, 4);
+            axes[0] = sf::Vertex(sf::Vector2f(startX, startY), TEXT_COLOR);
+            axes[1] = sf::Vertex(sf::Vector2f(startX + graphWidth, startY), TEXT_COLOR);
+            axes[2] = sf::Vertex(sf::Vector2f(startX, startY), TEXT_COLOR);
+            axes[3] = sf::Vertex(sf::Vector2f(startX, startY - graphHeight), TEXT_COLOR);
+            window.draw(axes);
+
+            // График
+            sf::VertexArray line(sf::LinesStrip, balanceHistory.size());
+            for (size_t i = 0; i < balanceHistory.size(); ++i) {
+                float x = startX + (i * graphWidth / (balanceHistory.size() - 1));
+                float y = startY - ((balanceHistory[i] - minBalance) / (maxBalance - minBalance)) * graphHeight;
+                line[i] = sf::Vertex(sf::Vector2f(x, y), sf::Color::Cyan);
+            }
+            window.draw(line);
+
+            // Подписи осей
+            sf::Text minLabel;
+            minLabel.setFont(font);
+            minLabel.setString(to_wstring(formatCurrency(minBalance)));
+            minLabel.setCharacterSize(12);
+            minLabel.setFillColor(TEXT_COLOR);
+            minLabel.setPosition(startX - 100, startY - 10);
+            window.draw(minLabel);
+
+            sf::Text maxLabel;
+            maxLabel.setFont(font);
+            maxLabel.setString(to_wstring(formatCurrency(maxBalance)));
+            maxLabel.setCharacterSize(12);
+            maxLabel.setFillColor(TEXT_COLOR);
+            maxLabel.setPosition(startX - 100, startY - graphHeight - 10);
+            window.draw(maxLabel);
+        }
+    }
+
+    void renderTransactions() {
+        sf::Text header;
+        header.setFont(font);
+        header.setString(L"ТРАНЗАКЦИИ");
+        header.setCharacterSize(36);
+        header.setFillColor(TEXT_COLOR);
+        header.setPosition(SIDEBAR_WIDTH + 20, 20);
+        window.draw(header);
+
+        wstringstream ss;
+        for (const auto& t : transactions) {
+            wstring typeText = (t.type == Income) ? L"Доход" : L"Расход";
+            sf::Color amountColor = (t.type == Income) ? POSITIVE_COLOR : NEGATIVE_COLOR;
+
+            ss << to_wstring(t.date) << L" | " << typeText << L" | ";
+
+            // Сумма с цветом
+            sf::Text amountText;
+            amountText.setFont(font);
+            amountText.setString(to_wstring(formatCurrency(t.amount)));
+            amountText.setFillColor(amountColor);
+            amountText.setCharacterSize(20);
+            amountText.setPosition(SIDEBAR_WIDTH + 300, 80 + (&t - &transactions[0]) * 30);
+            window.draw(amountText);
+
+            ss << to_wstring(t.category) << L" | " << to_wstring(t.comment) << L"\n";
+        }
+
+        sf::Text transactionsText;
+        transactionsText.setFont(font);
+        transactionsText.setString(ss.str());
+        transactionsText.setCharacterSize(20);
+        transactionsText.setFillColor(TEXT_COLOR);
+        transactionsText.setPosition(SIDEBAR_WIDTH + 20, 80);
+        window.draw(transactionsText);
+
+        addTransactionButton.draw(window);
+
+        sf::Text hint;
+        hint.setFont(font);
+        hint.setString(L"Нажмите кнопку ниже для добавления транзакции");
+        hint.setCharacterSize(16);
+        hint.setFillColor(sf::Color(150, 150, 150));
+        hint.setPosition(SIDEBAR_WIDTH + 20, WINDOW_HEIGHT - 150);
+        window.draw(hint);
+    }
+
+    void renderCategories() {
+        sf::Text header;
+        header.setFont(font);
+        header.setString(L"КАТЕГОРИИ");
+        header.setCharacterSize(36);
+        header.setFillColor(TEXT_COLOR);
+        header.setPosition(SIDEBAR_WIDTH + 20, 20);
+        window.draw(header);
+
+        wstringstream ss;
+        for (const auto& c : categories) {
+            float percent = (c.limit > 0) ? (c.transactionCount / c.limit) * 100 : 0;
+            ss << to_wstring(c.name) << L" | Лимит: " << to_wstring(formatCurrency(c.limit))
+                << L" | Использовано: " << to_wstring(formatCurrency(c.transactionCount))
+                << L" (" << (int)percent << L"%)" << L"\n";
+        }
+
+        sf::Text categoriesText;
+        categoriesText.setFont(font);
+        categoriesText.setString(ss.str());
+        categoriesText.setCharacterSize(20);
+        categoriesText.setFillColor(TEXT_COLOR);
+        categoriesText.setPosition(SIDEBAR_WIDTH + 20, 80);
+        window.draw(categoriesText);
+
+        sf::Text hint;
+        hint.setFont(font);
+        hint.setString(L"Щелкните в любом месте для добавления новой категории");
+        hint.setCharacterSize(16);
+        hint.setFillColor(sf::Color(150, 150, 150));
+        hint.setPosition(SIDEBAR_WIDTH + 20, WINDOW_HEIGHT - 150);
+        window.draw(hint);
+    }
+
+    void renderSettings() {
+        sf::Text header;
+        header.setFont(font);
+        header.setString(L"НАСТРОЙКИ");
+        header.setCharacterSize(36);
+        header.setFillColor(TEXT_COLOR);
+        header.setPosition(SIDEBAR_WIDTH + 20, 20);
+        window.draw(header);
+
+        wstringstream ss;
+        ss << L"Баланс карты: " << to_wstring(formatCurrency(settings.cardBalance)) << L"\n";
+        ss << L"Наличные: " << to_wstring(formatCurrency(settings.cashBalance)) << L"\n";
+        ss << L"Месячный лимит: " << to_wstring(formatCurrency(settings.monthLimit)) << L"\n";
+        ss << L"\nО программе:\n";
+        ss << L"Учет домашних финансов\nКаракулько Д.А. 2024-756\nВерсия 1.0\n2025 год";
+
+        sf::Text settingsText;
+        settingsText.setFont(font);
+        settingsText.setString(ss.str());
+        settingsText.setCharacterSize(20);
+        settingsText.setFillColor(TEXT_COLOR);
+        settingsText.setPosition(SIDEBAR_WIDTH + 20, 80);
+        window.draw(settingsText);
+
+        sf::Text hint;
+        hint.setFont(font);
+        hint.setString(L"Щелкните в любом месте для изменения настроек");
+        hint.setCharacterSize(16);
+        hint.setFillColor(sf::Color(150, 150, 150));
+        hint.setPosition(SIDEBAR_WIDTH + 20, WINDOW_HEIGHT - 150);
+        window.draw(hint);
+    }
+
+    void loadData() {
+        // Загрузка настроек
+        ifstream settingsFile("data/settings.txt");
         if (settingsFile.is_open()) {
-            settingsFile << settings.cardBalance << "," << settings.cashBalance << "," << settings.monthlyLimit;
+            string key;
+            while (settingsFile >> key) {
+                if (key == "card") settingsFile >> settings.cardBalance;
+                else if (key == "cash") settingsFile >> settings.cashBalance;
+                else if (key == "limit") settingsFile >> settings.monthLimit;
+            }
             settingsFile.close();
         }
 
-        // Сохранение категорий (упрощенная версия без codecvt)
-        ofstream categoriesFile("data/categories.csv");
+        // Загрузка категорий с русскими символами
+        ifstream categoriesFile("data/categories.txt", ios::binary);
         if (categoriesFile.is_open()) {
-            for (const auto& c : categories) {
-                categoriesFile << c.name << "," << c.limit << "," << c.transactionCount << "\n";
+            // Пропускаем BOM маркер если есть
+            char bom[3];
+            categoriesFile.read(bom, 3);
+            if (bom[0] != '\xEF' || bom[1] != '\xBB' || bom[2] != '\xBF') {
+                categoriesFile.seekg(0);
+            }
+
+            string line;
+            while (getline(categoriesFile, line)) {
+                stringstream ss(line);
+                string name;
+                float limit;
+                int count;
+
+                ss >> ws; 
+                getline(ss, name, ' '); 
+
+                if (ss >> limit >> count) {
+                    categories.push_back({ name, limit, count });
+                }
             }
             categoriesFile.close();
         }
 
-        // Сохранение транзакций (упрощенная версия без codecvt)
-        ofstream transactionsFile("data/transactions.csv");
+        // Загрузка транзакций с русскими символами
+        ifstream transactionsFile("data/transactions.txt", ios::binary);
         if (transactionsFile.is_open()) {
-            for (const auto& t : transactions) {
-                transactionsFile << t.date << "," << (t.isIncome ? "1" : "0") << "," << t.amount << ","
-                    << t.category << "," << t.comment << "\n";
+            // Пропускаем BOM маркер если есть
+            char bom[3];
+            transactionsFile.read(bom, 3);
+            if (bom[0] != '\xEF' || bom[1] != '\xBB' || bom[2] != '\xBF') {
+                transactionsFile.seekg(0);
+            }
+
+            string line;
+            while (getline(transactionsFile, line)) {
+                stringstream ss(line);
+                string date, type, category;
+                float amount;
+                string comment;
+
+                if (ss >> date >> type >> amount >> category) {
+                    // Чтение оставшейся части строки как комментария
+                    getline(ss, comment);
+                    // Удаляем начальный пробел если есть
+                    if (!comment.empty() && comment[0] == ' ') {
+                        comment = comment.substr(1);
+                    }
+
+                    TransactionType transactionType = (type == "income") ? Income : Expense;
+                    transactions.push_back({ date, transactionType, amount, category, comment });
+                }
             }
             transactionsFile.close();
         }
@@ -397,26 +826,40 @@ private:
                 getline(ss, category, ',');
                 getline(ss, comment, ',');
 
-                Transaction t;
-                t.date = getCurrentDate();
-                t.isIncome = (type == "доход");
-                t.amount = stof(amount);
-                t.category = category;
-                t.comment = comment;
-
-                transactions.push_back(t);
-                for (auto& c : categories) {
-                    if (c.name == category) {
-                        c.transactionCount++;
-                        break;
-                    }
+                TransactionType transactionType;
+                if (type == "доход") {
+                    transactionType = Income;
+                }
+                else if (type == "расход") {
+                    transactionType = Expense;
+                }
+                else {
+                    throw runtime_error("Некорректный тип транзакции");
                 }
 
-                if (t.isIncome) {
+                Transaction t = { getCurrentDate(), transactionType, stof(amount), category, comment };
+                transactions.push_back(t);
+
+                // Обновление баланса
+                if (t.type == Income) {
                     settings.cardBalance += t.amount;
                 }
                 else {
                     settings.cardBalance -= t.amount;
+                }
+
+                // Обновление категории
+                bool categoryFound = false;
+                for (auto& c : categories) {
+                    if (c.name == category) {
+                        c.transactionCount += t.amount;
+                        categoryFound = true;
+                        break;
+                    }
+                }
+
+                if (!categoryFound) {
+                    categories.push_back({ category, 0, (int)t.amount });
                 }
 
                 saveData();
@@ -439,12 +882,12 @@ private:
 
                 settings.cardBalance = stof(card);
                 settings.cashBalance = stof(cash);
-                settings.monthlyLimit = stof(limit);
+                settings.monthLimit = stof(limit);
                 saveData();
             }
         }
         catch (const exception& e) {
-            inputText.setString(L"Ошибка ввода: " + to_wstring(e.what()));
+            inputText.setString(L"Ошибка: " + to_wstring(e.what()));
             isEditing = true;
             return;
         }
@@ -458,16 +901,106 @@ private:
         inputContext = context;
         inputBuffer.clear();
         inputText.setString(L"");
+
+        if (context == "add_transaction") {
+            inputText.setString(L"Введите: доход/расход,сумма,категория,комментарий");
+        }
+        else if (context == "add_category") {
+            inputText.setString(L"Введите: название,лимит");
+        }
+        else if (context == "update_settings") {
+            inputText.setString(L"Введите: карта,наличные,лимит");
+        }
+    }
+
+    void updateStatistics() {
+        monthIncome.clear();
+        monthExpense.clear();
+        balanceHistory.clear();
+
+        map<int, float> monthlyIncome;
+        map<string, float> categoryExpenses;
+        map<int, float> dailyBalances;
+
+        for (const auto& t : transactions) {
+            int month = extractMonth(t.date);
+            int day = extractDay(t.date);
+
+            if (t.type == Income) {
+                monthlyIncome[month] += t.amount;
+            }
+            else {
+                categoryExpenses[t.category] += t.amount;
+            }
+
+            dailyBalances[day] = settings.cardBalance + settings.cashBalance;
+        }
+
+        for (const auto& [month, income] : monthlyIncome) {
+            monthIncome.push_back(income);
+        }
+
+        monthExpense = categoryExpenses;
+
+        for (const auto& [day, balance] : dailyBalances) {
+            balanceHistory.push_back(balance);
+        }
+    }
+
+    int extractMonth(const string& date) {
+        if (date.size() < 5) return 1;
+        return stoi(date.substr(3, 2));
+    }
+
+    int extractDay(const string& date) {
+        if (date.size() < 2) return 1;
+        return stoi(date.substr(0, 2));
+    }
+
+    float calculateTotalExpenses() {
+        float total = 0;
+        for (const auto& t : transactions) {
+            if (t.type == Expense) {
+                total += t.amount;
+            }
+        }
+        return total;
+    }
+
+    float calculateTotalIncome() {
+        float total = 0;
+        for (const auto& t : transactions) {
+            if (t.type == Income) {
+                total += t.amount;
+            }
+        }
+        return total;
+    }
+
+    sf::Color getCategoryColor(const string& category) {
+        static map<string, sf::Color> colors = {
+            {"Еда", sf::Color(255, 100, 100)},
+            {"Транспорт", sf::Color(100, 100, 255)},
+            {"Развлечения", sf::Color(100, 255, 100)},
+            {"Жилье", sf::Color(255, 255, 100)},
+            {"Здоровье", sf::Color(255, 100, 255)},
+            {"Одежда", sf::Color(100, 255, 255)},
+            {"Другое", sf::Color(200, 200, 200)}
+        };
+
+        auto it = colors.find(category);
+        return it != colors.end() ? it->second : sf::Color(150, 150, 150);
     }
 };
 
-// Главная функция
 int main() {
-    // Установка локали для поддержки кириллицы
-    setlocale(LC_ALL, "ru_RU.UTF-8");
+    // Устанавливаем локаль для консоли (если нужно)
+    setlocale(LC_ALL, "Russian");
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
 
     try {
-        sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), L"Учет домашних финансов", sf::Style::Titlebar | sf::Style::Close);
+        sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), L"Учет финансов", sf::Style::Titlebar | sf::Style::Close);
         window.setFramerateLimit(60);
 
         FinanceApp app(window);
@@ -479,10 +1012,7 @@ int main() {
         }
     }
     catch (const exception& e) {
-        // Используем обычный файл вместо широкого
-        ofstream logFile("error.log");
-        logFile << "Ошибка: " << e.what() << "\n";
-        logFile.close();
+        MessageBoxA(NULL, e.what(), "Error", MB_ICONERROR);
         return 1;
     }
 
