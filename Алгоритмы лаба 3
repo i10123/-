@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <queue>
 #include <cmath>
@@ -25,143 +26,117 @@ static int input_check(string message, int min, int max) {
 }
 
 // Задание 1
-struct Node {
-    int x, y;
-    int cost;
-    int heuristic;
-    pair<int, int> parent;
-
-    bool operator>(const Node& other) const {
-        return (cost + heuristic) > (other.cost + other.heuristic);
+struct Path {
+    int x, y, min;
+    bool operator>(const Path& other) const {
+        return min > other.min;
     }
 };
-static int calculateHeuristic(int x1, int y1, int x2, int y2) {
-    return abs(x1 - x2) + abs(y1 - y2);
-}
 static void printMatrix(const vector<vector<int>>& matrix) {
     cout << "Матрица высот:\n";
     for (const auto& row : matrix) {
         for (int val : row) {
-            cout << val << "\t";
+            cout << setw(4) << left << val;
         }
         cout << endl;
     }
 }
-static vector<pair<int, int>> reconstructPath(vector<vector<pair<int, int>>>& parents, pair<int, int> start, pair<int, int> goal, vector<vector<int>>& terrain, int& totalDistance) {
-    vector<pair<int, int>> path;
-    pair<int, int> current = goal;
-    totalDistance = 0;
+// Восстановление пути
+static vector<vector<int>> reconstructPath(vector<vector<vector<int>>>& parents, int start[], int goal[], int totalMin) {
+    vector<vector<int>> path;
+    int current[2] = { goal[0], goal[1] };
 
-    while (current != start) {
-        path.push_back(current);
-        pair<int, int> prev = parents[current.first][current.second];
-        totalDistance += abs(terrain[current.first][current.second] - terrain[prev.first][prev.second]) + 1;
-        current = prev;
+    while (current[0] != start[0] || current[1] != start[1]) {
+        path.push_back({ current[0], current[1] });
+        int prev[2] = { parents[current[0]][current[1]][0], parents[current[0]][current[1]][1] };
+        current[0] = prev[0];
+        current[1] = prev[1];
     }
-    path.push_back(start);
+
+    path.push_back({ start[0], start[1] });
     reverse(path.begin(), path.end());
+
+    cout << "Минимальная длина пути: " << totalMin << endl;
 
     return path;
 }
-static vector<pair<int, int>> findPath(vector<vector<int>>& terrain, pair<int, int> start, pair<int, int> goal, int& totalDistance) {
-    int n = terrain.size();
-    priority_queue<Node, vector<Node>, greater<Node>> pq;
-    pq.push({ start.first, start.second, 0, calculateHeuristic(start.first, start.second, goal.first, goal.second), {-1, -1} });
+// Поиск минимального пути
+static vector<vector<int>> searchPath(vector<vector<int>>& matrix, int start[], int goal[]) {
+    int n = matrix.size();
+    priority_queue<Path, vector<Path>, greater<Path>> pq;
+    vector<vector<int>> Long(n, vector<int>(n, INT_MAX));
+    vector<vector<vector<int>>> parents(n, vector<vector<int>>(n, vector<int>(2, -1)));
 
-    vector<vector<int>> visited(n, vector<int>(n, false));
-    vector<vector<pair<int, int>>> parents(n, vector<pair<int, int>>(n, { -1, -1 }));
-    visited[start.first][start.second] = true;
+    pq.push({ start[0], start[1], 0 });
+    Long[start[0]][start[1]] = 0;
 
-    vector<pair<int, int>> directions = { {0, 1}, {1, 0}, {0, -1}, {-1, 0} };
+    int directions[4][2] = { {0, 1}, {1, 0}, {0, -1}, {-1, 0} };
 
     while (!pq.empty()) {
-        Node current = pq.top();
+        Path current = pq.top();
         pq.pop();
 
-        if (current.x == goal.first && current.y == goal.second) {
-            return reconstructPath(parents, start, goal, terrain, totalDistance);
+        if (current.x == goal[0] && current.y == goal[1]) {
+            return reconstructPath(parents, start, goal, current.min);
         }
 
-        for (auto [dx, dy] : directions) {
-            int nx = current.x + dx, ny = current.y + dy;
+        for (auto dir : directions) {
+            int nx = current.x + dir[0], ny = current.y + dir[1];
 
-            if (nx >= 0 && ny >= 0 && nx < n && ny < n && !visited[nx][ny]) {
-                int new_cost = current.cost + abs(terrain[nx][ny] - terrain[current.x][current.y]) + 1;
-                pq.push({ nx, ny, new_cost, calculateHeuristic(nx, ny, goal.first, goal.second), {current.x, current.y} });
-                visited[nx][ny] = true;
-                parents[nx][ny] = { current.x, current.y };
+            if (nx >= 0 && ny >= 0 && nx < n && ny < n) {
+                int newCost = current.min + abs(matrix[nx][ny] - matrix[current.x][current.y]) + 1;
+
+                if (newCost < Long[nx][ny]) {
+                    Long[nx][ny] = newCost;
+                    pq.push({ nx, ny, newCost });
+                    parents[nx][ny][0] = current.x;
+                    parents[nx][ny][1] = current.y;
+                }
             }
         }
     }
-
     return {};
 }
 static void task1() {
-    srand(time(0)); // Инициализируем генератор случайных чисел
+    srand(time(0));
 
     int n;
     cout << "Введите размер матрицы: ";
     cin >> n;
 
-    vector<vector<int>> terrain(n, vector<int>(n));
+    // Автоматическое заполнение матрицы случайными числами от 1 до 100
+    vector<vector<int>> map(n, vector<int>(n));
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            map[i][j] = rand() % 100 + 1;
 
-    char choice;
-    cout << "Заполнить матрицу вручную (W) или случайными числами (R)? ";
-    cin >> choice;
+    printMatrix(map);
 
-    if (choice == 'R' || choice == 'r') {
-        int min_val, max_val;
-        cout << "Введите минимальное значение: ";
-        cin >> min_val;
-        cout << "Введите максимальное значение: ";
-        cin >> max_val;
+    int start[2]{}, final[2]{};
+    cout << "Введите координаты начала (x y): ";
+    cin >> start[0] >> start[1];
+    start[0]--;
+    start[1]--;
 
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < n; j++)
-                terrain[i][j] = min_val + rand() % (max_val - min_val + 1);
-    }
-    else {
-        cout << "Введите высоты каждого квадрата:\n";
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < n; j++) {
-                cout << "Введите [" << i + 1 << "][" << j + 1 << "]: ";
-                cin >> terrain[i][j];
-            }
-    }
+    cout << "Введите координаты цели (x y): ";
+    cin >> final[0] >> final[1];
+    final[0]--;
+    final[1]--;
 
-    // Вывод матрицы после заполнения
-    printMatrix(terrain);
-
-    pair<int, int> start, goal;
-    cout << "Введите координаты начала:\n";
-    cout << "Введите X: ";
-    cin >> start.first;
-    cout << "Введите Y: ";
-    cin >> start.second;
-    start.first--; start.second--; // Преобразуем в индексы массива
-
-    cout << "Введите координаты цели:\n";
-    cout << "Введите X: ";
-    cin >> goal.first;
-    cout << "Введите Y: ";
-    cin >> goal.second;
-    goal.first--; goal.second--; // Преобразуем в индексы массива
-
-    int totalDistance = 0;
-    vector<pair<int, int>> path = findPath(terrain, start, goal, totalDistance);
+    vector<vector<int>> path = searchPath(map, start, final);
 
     if (!path.empty()) {
         cout << "Путь:\n";
-        for (auto [x, y] : path) {
-            cout << "[" << x + 1 << "][" << y + 1 << "] -> ";
+        for (auto& pos : path) {
+            cout << "[" << pos[0] + 1 << "][" << pos[1] + 1 << "] -> ";
         }
         cout << "Цель\n";
-        cout << "Общее расстояние: " << totalDistance << endl << endl;
     }
     else {
-        cout << "Путь не найден.\n\n";
+        cout << "Путь не найден.\n";
     }
 }
+
 // Задание 2
 // Генерация случайного массива
 static vector<int> generateRandomArray(int n, int start_range, int end_range) {
@@ -308,7 +283,7 @@ static void task2v() {
 
 int main() {
     setlocale(LC_ALL, "RU");
-    
+
     while (true) {
         cout << "   Задачи: \n";
         cout << "1. (№7) Найти маршрут и минимальное расстояние пути. \n";
