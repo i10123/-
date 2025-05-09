@@ -1,0 +1,300 @@
+#include <iostream>
+#include <ctime>
+
+using namespace std;
+
+static int input_check(string message, int min, int max) {
+    int input;
+    while (true) {
+        cout << message;
+        cin >> input;
+
+        if (cin.fail() || input < min || input > max) {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка ввода! Введите число от " << min << " до " << max << ".\n";
+        }
+        else {
+            return input;
+        }
+    }
+}
+struct Queue {
+    int data;
+    Queue* next;
+
+    Queue(int val) : data(val), next(nullptr) {}
+};
+// Проверка, пустая ли очередь
+static bool isEmpty(Queue* first) {
+    return first == nullptr;
+}
+// Добавление элемента в конец очереди
+static void push(Queue*& first, Queue*& end, int val) {
+    Queue* newNode = new Queue(val);
+    isEmpty(first);
+    if (isEmpty(first)) {
+        first = end = newNode;
+    }
+    else {
+        end->next = newNode;
+        end = newNode;
+    }
+}
+// Удаление первого элемента очереди
+static void pop(Queue*& first, Queue*& end) {
+    if (isEmpty(first)) {
+        cout << "Очередь пуста, удалять нечего.\n";
+        return;
+    }
+    Queue* temp = first;
+    first = first->next;
+    delete temp;
+    if (isEmpty(first)) end = nullptr;
+}
+// Просмотр первого элемента
+static int peek(Queue* first) {
+    if (isEmpty(first)) {
+        cout << "Очередь пуста.\n";
+        return 0;
+    }
+    return first->data;
+}
+// Вывод всей очереди
+static void queuelist(Queue* first) {
+    if (isEmpty(first)) {
+        cout << "Очередь пуста.\n";
+        return;
+    }
+    Queue* temp = first;
+    while (temp) {
+        cout << temp->data << " ";
+        temp = temp->next;
+    }
+    cout << endl;
+}
+static void task1() {
+    Queue* first = nullptr;
+    Queue* end = nullptr;
+
+    while (true) {
+        cout << endl;
+        cout << "Меню управления очередью:\n";
+        cout << "1. Добавить элемент\n";
+        cout << "2. Удалить элемент\n";
+        cout << "3. Посмотреть первый элемент\n";
+        cout << "4. Вывести всю очередь\n";
+        cout << "0. Вернуться в главное меню\n\n";
+
+        int choice = input_check("Выберите действие: ", 0, 4);
+
+        switch (choice) {
+        case 1: {
+            int value = input_check("Введите значение: ", INT_MIN, INT_MAX);
+            push(first, end, value);
+            cout << endl;
+            break;
+        }
+        case 2:
+            pop(first, end);
+            cout << endl;
+            break;
+        case 3:
+            cout << "Первый элемент: " << peek(first) << endl;
+            cout << endl;
+            break;
+        case 4:
+            queuelist(first);
+            cout << endl;
+            break;
+        case 0:
+            return;
+        }
+    }
+}
+
+// Удаление последнего элемента очереди
+static void popLast(Queue*& first, Queue*& end) {
+    if (isEmpty(first)) {
+        cout << "Очередь пуста, удалять нечего.\n";
+        return;
+    }
+    if (first == end) { // Если всего один элемент
+        delete first;
+        first = end = nullptr;
+        return;
+    }
+    Queue* temp = first;
+    while (temp->next != end) {
+        temp = temp->next;
+    }
+    delete end;
+    end = temp;
+    end->next = nullptr;
+}
+// Создание очереди с n случайными числами из диапазона [-50, 50]
+static void generateQueue(Queue*& first, Queue*& end, int n) {
+    srand(time(0)); // генератор случайных чисел
+    for (int i = 0; i < n; i++) {
+        int randomValue = rand() % 101 - 50; // числа от -50 до 50
+        push(first, end, randomValue);
+    }
+}
+// Удаление первого и последнего элементов очереди
+static void deleteFirstLast(Queue * &first, Queue * &end) {
+    pop(first, end);
+    popLast(first, end);
+}
+static void task2() {
+    Queue* first = nullptr;
+    Queue* end = nullptr;
+
+    int n = input_check("Введите количество элементов в очереди: ", 1, 100);
+    generateQueue(first, end, n);
+
+    cout << "Сгенерированная очередь:\n";
+    queuelist(first);
+
+    deleteFirstLast(first, end);
+
+    cout << "Очередь после удаления первого и последнего элемента:\n";
+    queuelist(first);
+}
+
+struct List {
+    int data;
+    List* next;
+    List* prev;
+
+    List(int val) : data(val), prev(nullptr), next(nullptr) {}
+};
+// Проверка, пустая ли очередь
+static bool isEmptyList(List* first) {
+    return first == nullptr;
+}
+// Добавление элемента в конец списка
+static void pushList(List*& first, List*& end, int val) {
+    List* newNode = new List(val);
+    if (isEmptyList(first)) {
+        first = end = newNode;
+    }
+    else {
+        end->next = newNode;
+        newNode->prev = end;
+        end = newNode;
+    }
+}
+// Вывод списка
+static void listDisplay(List* first) {
+    if (isEmptyList(first)) {
+        cout << "Список пуст.\n";
+        return;
+    }
+    List* temp = first;
+    while (temp) {
+        cout << temp->data << " ";
+        temp = temp->next;
+    }
+    cout << endl;
+}
+// Создание списка с n случайными числами из диапазона [-50, 50]
+static void generateList(List*& first, List*& end, int n) {
+    srand(time(0));
+    for (int i = 0; i < n; i++) {
+        int randomValue = rand() % 101 - 50;
+        pushList(first, end, randomValue);
+    }
+}
+// Удаление элемента
+static void deleteEl(List*& first, List*& end, List* element) {
+    if (isEmptyList(element)) return;
+
+    if (element == first) first = first->next;
+    if (element == end) end = end->prev;
+
+    if (element->prev) element->prev->next = element->next;
+    if (element->next) element->next->prev = element->prev;
+
+    delete element;
+}
+// Удаление повторяющихся элементов
+static void deleteDublicates(List*& first, List*& end) {
+    if (isEmptyList(first)) return;
+
+    List* current = first;
+    while (!isEmptyList(current)) {
+        List* checker = current->next;
+        bool isDublicate = false;
+
+        // Ищем дубликаты
+        while (checker) {
+            if (checker->data == current->data) {
+                isDublicate = true;
+                List* nextNode = checker->next;
+                deleteEl(first, end, checker);
+                checker = nextNode;
+            }
+            else {
+                checker = checker->next;
+            }
+        }
+
+        // Если был дубликат, удаляем сам current
+        List* nextNode = current->next;
+        if (isDublicate) {
+            deleteEl(first, end, current);
+        }
+        current = nextNode;
+    }
+}
+static void task3() {
+    List* first = nullptr;
+    List* end = nullptr;
+
+    int n = input_check("Введите количество элементов списка: ", 1, 100);
+    generateList(first, end, n);
+
+    cout << "Список до удаления повторяющихся элементов:\n";
+    listDisplay(first);
+
+    deleteDublicates(first, end);
+
+    cout << "Список после удаления повторяющихся элементов:\n";
+    listDisplay(first);
+}
+
+// Главное меню
+static void Menu() {
+    while (true) {
+        cout << "   Задачи:\n";
+        cout << "1. Работа с очередью\n";
+        cout << "2. Удалить первый и последний элементы очереди\n";
+        cout << "3. Удалить из списка элементы с повторяющимися более одного раза значениями\n";
+        cout << "0. Выход\n";
+
+        int n = input_check("Введите номер задачи: ", 0, 3);
+        switch (n) {
+        case 0:
+            cout << "Завершение программы.\n";
+            return;
+        case 1:
+            task1();
+            cout << endl;
+            break;
+        case 2:
+            task2();
+            cout << endl;
+            break;
+        case 3:
+            task3();
+            cout << endl;
+            break;
+        }
+    }
+}
+
+int main() {
+    setlocale(LC_ALL, "RU");
+    Menu();
+    return 0;
+}
