@@ -189,30 +189,50 @@ static vector<int> findLISWithGaps(const vector<int>& arr, int m) {
     int n = arr.size();
     if (n == 0) return {};
 
-    vector<int> dp(n, 1), prev(n, -1);
-    int max_length = 0, last_index = -1;
+    // dp[i][k] — длина LIS, заканчивающаяся на индексе i с k разрывами
+    vector<vector<int>> dp(n, vector<int>(m + 1, 1));
+    vector<vector<int>> prev(n, vector<int>(m + 1, -1));
+    vector<vector<bool>> used_gap(n, vector<bool>(m + 1, false));
+    int max_length = 0, last_index = -1, gaps_used = 0;
 
     for (int i = 0; i < n; i++) {
-        int gaps_used = 0;
-        for (int j = 0; j < i; j++) {
-            if (arr[j] < arr[i] || (gaps_used < m)) {
-                if (dp[i] < dp[j] + 1) {
-                    dp[i] = dp[j] + 1;
-                    prev[i] = j;
-                    gaps_used++;
+        for (int k = 0; k <= m; k++) {
+            for (int j = 0; j < i; j++) {
+                // Случай без разрыва: arr[j] < arr[i]
+                if (arr[j] < arr[i]) {
+                    if (dp[i][k] < dp[j][k] + 1) {
+                        dp[i][k] = dp[j][k] + 1;
+                        prev[i][k] = j;
+                        used_gap[i][k] = false;
+                    }
+                }
+                // Случай с разрывом: k > 0, arr[j] >= arr[i]
+                if (k > 0) {
+                    if (dp[i][k] < dp[j][k - 1] + 1) {
+                        dp[i][k] = dp[j][k - 1] + 1;
+                        prev[i][k] = j;
+                        used_gap[i][k] = true;
+                    }
                 }
             }
-        }
-        if (dp[i] > max_length) {
-            max_length = dp[i];
-            last_index = i;
+            if (dp[i][k] > max_length) {
+                max_length = dp[i][k];
+                last_index = i;
+                gaps_used = k;
+            }
         }
     }
 
+    // Восстановление последовательности
     vector<int> lis;
-    while (last_index != -1) {
-        lis.push_back(arr[last_index]);
-        last_index = prev[last_index];
+    int curr = last_index, curr_gaps = gaps_used;
+    while (curr != -1) {
+        lis.push_back(arr[curr]);
+        int next = prev[curr][curr_gaps];
+        if (next != -1 && used_gap[curr][curr_gaps]) {
+            curr_gaps--;
+        }
+        curr = next;
     }
     reverse(lis.begin(), lis.end());
 
@@ -253,8 +273,8 @@ static void task2b() {
     vector<int> arr = generateRandomArray(n, start_range, end_range);
     printArray(arr, "Сгенерированный массив");
 
-    vector<int> lis = findLIS(arr);
-    printArray(lis, "Наибольшая строго возрастающая подпоследовательность");
+    vector<int> lis = findLISWithGaps(arr, 1);
+    printArray(lis, "Наибольшая строго возрастающая подпоследовательность (с одним разрывом)");
 
     cout << "Минимальное количество вычеркнутых элементов: " << (n - lis.size()) << endl;
 }
