@@ -75,7 +75,7 @@ static vector<vector<int>> searchPath(vector<vector<int>>& matrix, int start[], 
     while (!pq.empty()) {
         Path current = pq.top();
         pq.pop();
-
+        
         if (current.x == goal[0] && current.y == goal[1]) {
             return reconstructPath(parents, start, goal, current.min);
         }
@@ -84,11 +84,11 @@ static vector<vector<int>> searchPath(vector<vector<int>>& matrix, int start[], 
             int nx = current.x + dir[0], ny = current.y + dir[1];
 
             if (nx >= 0 && ny >= 0 && nx < n && ny < n) {
-                int newCost = current.min + abs(matrix[nx][ny] - matrix[current.x][current.y]) + 1;
+                int newMin = current.min + abs(matrix[nx][ny] - matrix[current.x][current.y]) + 1;
 
-                if (newCost < Long[nx][ny]) {
-                    Long[nx][ny] = newCost;
-                    pq.push({ nx, ny, newCost });
+                if (newMin < Long[nx][ny]) {
+                    Long[nx][ny] = newMin;
+                    pq.push({ nx, ny, newMin });
                     parents[nx][ny][0] = current.x;
                     parents[nx][ny][1] = current.y;
                 }
@@ -155,7 +155,7 @@ static void printArray(const vector<int>& arr, const string& message) {
     cout << endl;
 }
 // Нахождение наибольшей строго возрастающей подпоследовательности
-vector<int> findLIS(const vector<int>& arr) {
+static vector<int> findLIS(const vector<int>& arr) {
     int n = arr.size();
     if (n == 0) return {};
 
@@ -174,7 +174,7 @@ vector<int> findLIS(const vector<int>& arr) {
             last_index = i;
         }
     }
-
+    // преобразование для вывода
     vector<int> lis;
     while (last_index != -1) {
         lis.push_back(arr[last_index]);
@@ -198,7 +198,7 @@ static vector<int> findLISWithGaps(const vector<int>& arr, int m) {
     for (int i = 0; i < n; i++) {
         for (int k = 0; k <= m; k++) {
             for (int j = 0; j < i; j++) {
-                // Случай без разрыва: arr[j] < arr[i]
+                // без разрыва
                 if (arr[j] < arr[i]) {
                     if (dp[i][k] < dp[j][k] + 1) {
                         dp[i][k] = dp[j][k] + 1;
@@ -206,7 +206,7 @@ static vector<int> findLISWithGaps(const vector<int>& arr, int m) {
                         used_gap[i][k] = false;
                     }
                 }
-                // Случай с разрывом: k > 0, arr[j] >= arr[i]
+                // с разрывом
                 if (k > 0) {
                     if (dp[i][k] < dp[j][k - 1] + 1) {
                         dp[i][k] = dp[j][k - 1] + 1;
