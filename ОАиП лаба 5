@@ -32,7 +32,6 @@ static bool isEmpty(Queue* first) {
 // Добавление элемента в конец очереди
 static void push(Queue*& first, Queue*& end, int val) {
     Queue* newNode = new Queue(val);
-    isEmpty(first);
     if (isEmpty(first)) {
         first = end = newNode;
     }
@@ -61,7 +60,7 @@ static int peek(Queue* first) {
     return first->data;
 }
 // Вывод всей очереди
-static void queuelist(Queue* first) {
+static void queuePrint(Queue* first) {
     if (isEmpty(first)) {
         cout << "Очередь пуста.\n";
         return;
@@ -104,7 +103,7 @@ static void task1() {
             cout << endl;
             break;
         case 4:
-            queuelist(first);
+            queuePrint(first);
             cout << endl;
             break;
         case 0:
@@ -134,16 +133,11 @@ static void popLast(Queue*& first, Queue*& end) {
 }
 // Создание очереди с n случайными числами из диапазона [-50, 50]
 static void generateQueue(Queue*& first, Queue*& end, int n) {
-    srand(time(0)); // генератор случайных чисел
+    srand(time(0));
     for (int i = 0; i < n; i++) {
         int randomValue = rand() % 101 - 50; // числа от -50 до 50
         push(first, end, randomValue);
     }
-}
-// Удаление первого и последнего элементов очереди
-static void deleteFirstLast(Queue * &first, Queue * &end) {
-    pop(first, end);
-    popLast(first, end);
 }
 static void task2() {
     Queue* first = nullptr;
@@ -153,22 +147,23 @@ static void task2() {
     generateQueue(first, end, n);
 
     cout << "Сгенерированная очередь:\n";
-    queuelist(first);
+    queuePrint(first);
 
-    deleteFirstLast(first, end);
+    pop(first, end);
+    popLast(first, end);
 
     cout << "Очередь после удаления первого и последнего элемента:\n";
-    queuelist(first);
+    queuePrint(first);
 }
 
 struct List {
     int data;
     List* next;
-    List* prev;
+    List* back;
 
-    List(int val) : data(val), prev(nullptr), next(nullptr) {}
+    List(int val) : data(val), back(nullptr), next(nullptr) {}
 };
-// Проверка, пустая ли очередь
+// Проверка, пустой ли список
 static bool isEmptyList(List* first) {
     return first == nullptr;
 }
@@ -180,12 +175,12 @@ static void pushList(List*& first, List*& end, int val) {
     }
     else {
         end->next = newNode;
-        newNode->prev = end;
+        newNode->back = end;
         end = newNode;
     }
 }
 // Вывод списка
-static void listDisplay(List* first) {
+static void listPrint(List* first) {
     if (isEmptyList(first)) {
         cout << "Список пуст.\n";
         return;
@@ -210,10 +205,10 @@ static void deleteEl(List*& first, List*& end, List* element) {
     if (isEmptyList(element)) return;
 
     if (element == first) first = first->next;
-    if (element == end) end = end->prev;
+    if (element == end) end = end->back;
 
-    if (element->prev) element->prev->next = element->next;
-    if (element->next) element->next->prev = element->prev;
+    if (element->back) element->back->next = element->next;
+    if (element->next) element->next->back = element->back;
 
     delete element;
 }
@@ -241,9 +236,7 @@ static void deleteDublicates(List*& first, List*& end) {
 
         // Если был дубликат, удаляем сам current
         List* nextNode = current->next;
-        if (isDublicate) {
-            deleteEl(first, end, current);
-        }
+        if (isDublicate) deleteEl(first, end, current);
         current = nextNode;
     }
 }
@@ -255,12 +248,12 @@ static void task3() {
     generateList(first, end, n);
 
     cout << "Список до удаления повторяющихся элементов:\n";
-    listDisplay(first);
+    listPrint(first);
 
     deleteDublicates(first, end);
 
     cout << "Список после удаления повторяющихся элементов:\n";
-    listDisplay(first);
+    listPrint(first);
 }
 
 // Главное меню
