@@ -179,12 +179,15 @@ Exit:
 end start
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+masm
 .model small
 .386
 .stack 128
 
 .data
     sign db ?
+    count db ?
+    Ost dw ?
     X dw ?
     Y dw ?
     F dw ?
@@ -197,154 +200,94 @@ end start
     msgNechet db 10, 13,'Nechetnoe', 10, 13, '$'
     msgPositive db 'Positive$'
     msgNegative db 'Negative$'
-    newline db 13, 10, '$'
 
 .code
 InputNumber proc
-    push bx
-    push cx
-    push dx
-    
     jmp input_start
-    
 input_error:
     mov dx, offset error_msg
     mov ah, 09h
     int 21h
-    xor ax, ax
-    mov sign, 0
-    stc             ; Установка флага переноса для обозначения ошибки
-    jmp input_exit
-    
 input_start:
-    xor bx, bx      ; Очищаем BX (здесь будем хранить число)
-    mov sign, 0     ; Сбрасываем флаг знака
-    
-    ; Читаем первый символ
+    xor bx, bx
+    mov sign, 0
     mov ah, 01h
     int 21h
-    
-    ; Проверяем на знак минус
     cmp al, '-'
     jne check_first_num
-    mov sign, 1     ; Устанавливаем флаг отрицательного числа
-    mov ah, 01h     ; Читаем следующий символ
-    int 21h
-    
-check_first_num:
-    ; Проверяем, что символ - цифра
-    cmp al, '0'
-    jb input_error
-    cmp al, '9'
-    ja input_error
-    
-    ; Преобразуем символ в цифру
-    sub al, '0'
-    mov bl, al      ; Сохраняем первую цифру в BL
-    
-input_loop:
-    ; Читаем следующий символ
+    mov sign, 1
     mov ah, 01h
     int 21h
-    
-    ; Проверяем на конец ввода (Enter)
-    cmp al, 0Dh
-    je end_input
-    
-    ; Проверяем, что символ - цифра
+check_first_num:
     cmp al, '0'
     jb input_error
     cmp al, '9'
     ja input_error
-    
-    ; Преобразуем символ в цифру
-    sub al, '0'
-    mov cl, al      ; Сохраняем новую цифру в CL
-    
-    ; Умножаем текущее значение на 10
-    mov ax, bx
+coninput:
+    sub al, 30h
+    mov bl, al
     mov dx, 10
-    mul dx          ; AX = BX * 10
-    jc input_error  ; Проверка на переполнение
-    
-    ; Добавляем новую цифру
+Input:
+    mov ah, 01h
+    int 21h
+    cmp al, 0Dh
+    je EndPrint
+    cmp al, '0'
+    jb input_error
+    cmp al, '9'
+    ja input_error
+    sub al, 30h
+    mov cl, al
+    mov ax, bx
+    imul dx
     add ax, cx
-    jc input_error  ; Проверка на переполнение
-    mov bx, ax      ; Сохраняем результат в BX
-    
-    jmp input_loop
-    
-end_input:
-    ; Проверяем диапазон для знаковых 16-битных чисел
+    mov bx, ax
+    cbw
+    jmp Input
+EndPrint:
     cmp sign, 1
     jne check_positive
-    
-    ; Для отрицательных чисел
     cmp bx, 32768
     ja input_error
     neg bx
-    jmp input_ok
-    
+    jmp final
 check_positive:
-    ; Для положительных чисел
     cmp bx, 32767
     ja input_error
-    
-input_ok:
-    mov ax, bx      ; Возвращаем результат в AX
-    clc             ; Сбрасываем флаг переноса (нет ошибки)
-    
-input_exit:
-    pop dx
-    pop cx
-    pop bx
+final:
+    mov cx, bx
     ret
 InputNumber endp
 
 OutputNumber proc
-    push ax
-    push bx
-    push cx
-    push dx
-    
-    test ax, ax
-    jns positive_num
-    
-    ; Выводим минус для отрицательных чисел
+    cmp ax, 0
+    jns Positive
     push ax
     mov dl, '-'
     mov ah, 02h
     int 21h
     pop ax
     neg ax
-    
-positive_num:
-    xor cx, cx      ; Счетчик цифр
-    mov bx, 10      ; Основание системы счисления
-    
-convert_loop:
+Positive:
+    mov bx, 10
+    xor cx, cx
+ConvertLoop:
     xor dx, dx
-    div bx          ; Делим AX на 10
-    push dx         ; Сохраняем остаток (цифру)
-    inc cx          ; Увеличиваем счетчик цифр
-    
-    test ax, ax
-    jnz convert_loop
-    
-print_loop:
-    pop dx          ; Восстанавливаем цифру
-    add dl, '0'     ; Преобразуем в символ
+    div bx
+    push dx
+    inc cx
+    cmp ax, 0
+    jnz ConvertLoop
+PrintLoop:
+    pop dx
+    cmp dx, 10
+    je exit
+    add dl, '0'
     mov ah, 02h
     int 21h
-    loop print_loop
-    
-    pop dx
-    pop cx
-    pop bx
-    pop ax
+    loop PrintLoop
     ret
 OutputNumber endp
-
 
 start:
     mov ax, @data
@@ -353,96 +296,91 @@ start:
     mov dx, offset msgFormula
     mov ah, 09h
     int 21h
-    
-input_y:
+Input_Y:
     mov dx, offset msgY
     mov ah, 09h
     int 21h
     call InputNumber
-    jc input_y      ; Повторяем ввод при ошибке
-    mov Y, ax
-    
-input_x:
+    mov Y, cx
+Input_X:
     mov dx, offset msgX
     mov ah, 09h
     int 21h
     call InputNumber
-    jc input_x      ; Повторяем ввод при ошибке
-    mov X, ax
-    cmp ax, 0
-    jne calculate
-    
-    ; X не может быть 0
+    mov X, cx
+
+    cmp cx, 0
+    jne Primer
     mov dx, offset error_msg
     mov ah, 09h
     int 21h
-    jmp input_x
-    
-calculate:
-    ; Вычисляем F = (Y * 32) % X / 22
+    jmp Input_X 
+Primer: 
+    ; Y * 32
     mov ax, Y
-    shl ax, 5       ; Умножаем на 32 (эквивалентно Y*32)
-    cwd             ; Расширяем знак в DX:AX
-    idiv X          ; Делим на X (результат в AX, остаток в DX)
-    mov ax, dx      ; Берем остаток от деления (Y*32 % X)
-    cwd             ; Расширяем знак для деления
-    mov bx, 22
-    idiv bx         ; Делим остаток на 22
-    mov F, ax       ; Сохраняем результат
+    shl ax, 5
+    mov Y, ax
+    ; (Y * 32) % X
+    mov bx, X
+    idiv bx
+    imul bx
+    cmp cx,0
+    jg Positiv
+    neg cx
+    neg ax
+        
+    Negativ:
+        sub Y, ax
+        neg cx
+        mov count, 1
+        jmp EndAnswer
+            
+    Positiv:
+        sub Y, ax
+
+    EndAnswer:
+        mov Ost,cx
+        mov bx, 11
+        sal bx, 1
+        mov ax,Ost
+        idiv bx
+
+    mov F,ax
     
-    ; Выводим результат
-    mov dx, offset newline
-    mov ah, 09h
-    int 21h
-    
+Print_res:
     mov dx, offset msgResult
     mov ah, 09h
     int 21h
     mov ax, F
-    call OutputNumber
-    
-    ; Проверяем четность
-    mov dx, offset newline
-    mov ah, 09h
-    int 21h
-    
+    call OutputNumber    
+
+Check_parity:
     test F, 1
-    jz even_number
-    
-    ; Нечетное число
+    jz PrintChet    ; Если результат test равен 0 (четное)
     mov dx, offset msgNechet
-    jmp print_parity
-    
-even_number:
-    ; Четное число
+    jmp PrintMessage
+
+PrintChet:
     mov dx, offset msgChet
-    
-print_parity:
+
+PrintMessage:
     mov ah, 09h
     int 21h
-    
-    ; Проверяем знак числа
-    mov dx, offset newline
-    mov ah, 09h
-    int 21h
-    
-    mov ax, F
+
+Check_sign:
     test ax, ax
-    jns positive_result
-    
-    ; Отрицательное число
-    mov dx, offset msgNegative
-    jmp print_sign
-    
-positive_result:
-    ; Положительное число
+    js PrintNegative
     mov dx, offset msgPositive
-    
-print_sign:
+    jmp PrintMessageEnd
+
+PrintNegative:
+    mov dx, offset msgNegative
+
+PrintMessageEnd:
     mov ah, 09h
     int 21h
-    
-exit:
+
+Exit:
     mov ax, 4C00h
     int 21h
 end start
