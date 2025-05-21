@@ -189,14 +189,11 @@ model small
     Ost dw ?
     F db 'F = (Y * 32) % X / 22', 10, 13, '$'
     Answer dw ?
-    newline db 13,10,'$'
-    Border db '-------------------$'
-    Output1 db '4etnoe$'
-    Output2 db 'Ne4etnoe$'
-    OutPositive db 'Positive$'
-    OutNegative db 'Negative$'
+    Output1 db 13,10,'4etnoe$'
+    Output2 db 13,10,'Ne4etnoe$'
+    OutPositive db 13,10,'Positive',13,10,'$'
+    OutNegative db 13,10,'Negative',13,10,'$'
     sign db ?
-    count db ?
 .code
 start:
     mov ax,@data
@@ -205,9 +202,6 @@ start:
 InputY:    
     mov ah, 09h
     mov dx, offset F
-    int 21h
-    mov ah, 09h
-    mov dx, offset newline
     int 21h
 
     mov sign, 0 
@@ -309,7 +303,6 @@ InputY:
         Positive_Negative:
             sub cx, ax
             neg cx
-            mov count, 1
             jmp EndAnswer
             
         Two_Positives:
@@ -329,54 +322,35 @@ InputY:
         and bl, al
         cmp bl, 1
         je OutputNe4et
-        jmp Output4et
-        
-    OutputNe4et:
-        mov ah, 09h
-        mov dx, offset newline
-        int 21h
-        mov ah, 09h
-        mov dx, offset Output2
-        int 21h
-        jmp ChekSign
-        
-    Output4et:
-        mov ah, 09h
-        mov dx, offset newline
-        int 21h
-        mov ah, 09h
-        mov dx, offset Output1
-        int 21h
+
+        Output4et:
+            mov ah, 09h
+            mov dx, offset Output1
+            int 21h
+            jmp ChekSign
+            
+        OutputNe4et:
+            mov ah, 09h
+            mov dx, offset Output2
+            int 21h
         
     ChekSign:
-        cmp count, 1
-        je NegativeSign
-        jmp PositiveSign
-        
-    NegativeSign:
-        mov ah,09h
-        mov dx,offset newline
-        int 21h
-        mov ah,09h
-        mov dx,offset OutNegative
-        int 21h
-        jmp OutputF
-        
-    PositiveSign:
-        mov ah,09h
-        mov dx,offset newline
-        int 21h
-        mov ah,09h
-        mov dx,offset OutPositive
-        int 21h
+        mov  ax, Answer
+        test ax, ax
+        js NegativeSign
+    
+        PositiveSign:
+            mov ah,09h
+            mov dx,offset OutPositive
+            int 21h
+            jmp OutputF
+            
+        NegativeSign:
+            mov ah,09h
+            mov dx,offset OutNegative
+            int 21h
         
     OutputF:
-        mov ah,09h
-        mov dx,offset Border
-        int 21h
-        mov ah,09h
-        mov dx,offset newline
-        int 21h
         xor dx, dx
         push -1
         mov ax, Answer
