@@ -180,7 +180,7 @@ end start
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 masm 
-model small 
+.model small 
 .386
 .stack 400h 
 .data
@@ -195,6 +195,41 @@ model small
     OutNegative db 13,10,'Negative',13,10,'$'
     sign db ?
 .code
+
+; Оригинальная процедура деления с сдвигами
+div_si proc
+    push bx
+    push bp
+    push di
+    
+    xor bx,bx
+    xor cx,cx
+    xor di,di
+    mov bp,33
+    
+    M5A4:
+    rcl cx,1
+    rcl bx,1
+    sub cx,si
+    sbb bx,di
+    jnb M5B2
+    
+    add cx,si
+    adc bx,di
+    
+    M5B2:
+    cmc
+    rcl ax,1
+    rcl dx,1
+    dec bp
+    jnz M5A4
+    
+    pop di
+    pop bp
+    pop bx
+    ret
+div_si endp
+
 start:
     mov ax,@data
     mov ds, ax
@@ -275,67 +310,81 @@ InputY:
         FinB:
             mov x, cx
  
-    Primer:
+        Primer:
         ; Y * 32
-        mov bx, 1
-        sal y, 5
         mov ax, y
-        imul bx
-        ; (Y * 32) % X
-        mov cx, ax
-        mov bx, x
-        idiv bx
-        imul bx
-        cmp cx, 0
-        jg Positive1
-        neg cx
+        sal ax, 5
+
+        mov cx, dx
+        or cx, ax
+        jns positive_mul
+        ; Если отрицательное, делаем положительным
         neg ax
-        
-        Negative1:
-            cmp bx, 0
-            jg Positive_Negative
-            jmp Two_Positives
+        sbb dx, 0
+        neg dx
 
-        Positive1:
-            cmp bx, 0
-            jg Two_Positives
+    positive_mul:
+        ; Сохраняем результат в DX:AX
+        ; x -> si, получаем его абсолютное значение
+        mov si, x
+        mov bx, si
+        sar bx, 15        ; BX = 0 если x >= 0, -1 если x < 0
+        xor si, bx
+        sub si, bx        ; теперь SI = abs(x)
 
-        Positive_Negative:
-            sub cx, ax
-            neg cx
-            jmp EndAnswer
-            
-        Two_Positives:
-            sub cx, ax
-        ; (Y * 32) % X / 22
-        EndAnswer:
-            mov Ost, cx
-            mov bx, 11
-            sal bx, 1
-            mov ax, Ost
-            idiv bx
-            mov Answer,ax
+        ; Делим abs(Y*32) на abs(X)
+        call div_si       ; AX = частное, CX = остаток
+
+        ; Если исходное значение Y*32 < 0, инвертируем знак остатка
+        test cx, cx       ; если остаток != 0 и DX был отрицательный
+        jns skip_neg_rem
+        neg cx
+
+    skip_neg_rem:
+        mov Ost, cx
+
+        ; Теперь делим остаток на 22
+        mov ax, cx
+        cwd
+        mov si, 22
+        call div_si       ; AX = частное
+        mov Answer, ax
+
+        ; === Определяем знак результата ===
+        ; y — в переменной y, x — в переменной x
+
+        mov ax, y
+        sar ax, 15       ; AX = 0 если y >= 0, -1 если y < 0
+        mov bx, x
+        sar bx, 15       ; BX = 0 если x >= 0, -1 если x < 0
+
+        xor ax, bx       ; если знаки разные → результат будет -1 (FF..)
+        jz ChekZero      ; если оба положительные или оба отрицательные → знак результата положительный
+
+        ; Знаки разные → меняем знак ответа
+        mov ax, Answer
+        neg ax
+        mov Answer, ax
+        neg ax
+        mov Answer, ax
         
     ChekZero:
-        mov bl, 00000001b
-        and al, 00000001b
-        and bl, al
-        cmp bl, 1
-        je OutputNe4et
+        test ax, 1
+        jz Output4et
 
-        Output4et:
-            mov ah, 09h
-            mov dx, offset Output1
-            int 21h
-            jmp ChekSign
-            
         OutputNe4et:
             mov ah, 09h
             mov dx, offset Output2
             int 21h
+            jmp ChekSign
+            
+        Output4et:
+            mov ah, 09h
+            mov dx, offset Output1
+            int 21h
         
     ChekSign:
-        mov  ax, Answer
+        mov ax, Answer
         test ax, ax
         js NegativeSign
     
@@ -367,7 +416,7 @@ InputY:
             mov bx, 10
  
         contX2:
-            mov dx, 0
+            xor dx, dx
             div bx
             push dx
             cmp ax, 0
@@ -377,7 +426,7 @@ InputY:
             pop dx
             cmp dx, -1
             je Exit
-            add dl, 30h
+            add dl, '0'
             mov ah, 02h
             int 21h
             jmp OutX
