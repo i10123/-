@@ -19,62 +19,94 @@ static int input_check(string message, int min, int max) {
         }
     }
 }
-struct Queue {
-    int data;
-    Queue* next;
 
-    Queue(int val) : data(val), next(nullptr) {}
+struct Node {
+    int data;
+    Node* next;
+
+    Node(int val) : data(val), next(nullptr) {}
 };
-// Проверка, пустая ли очередь
-static bool isEmpty(Queue* first) {
-    return first == nullptr;
-}
-// Добавление элемента в конец очереди
-static void push(Queue*& first, Queue*& end, int val) {
-    Queue* newNode = new Queue(val);
-    if (isEmpty(first)) {
-        first = end = newNode;
+struct Queue {
+    Node* front = nullptr;
+    Node* back = nullptr;
+
+    bool isEmpty() const {
+        return front == nullptr;
     }
-    else {
-        end->next = newNode;
-        end = newNode;
+
+    void push(int val) {
+        Node* newNode = new Node(val);
+        if (isEmpty()) {
+            front = back = newNode;
+        }
+        else {
+            back->next = newNode;
+            back = newNode;
+        }
     }
-}
-// Удаление первого элемента очереди
-static void pop(Queue*& first, Queue*& end) {
-    if (isEmpty(first)) {
-        cout << "Очередь пуста, удалять нечего.\n";
-        return;
+
+    void pop() {
+        if (isEmpty()) {
+            cout << "Очередь пуста, удалять нечего.\n";
+            return;
+        }
+        Node* temp = front;
+        front = front->next;
+        delete temp;
+        if (isEmpty()) back = nullptr;
     }
-    Queue* temp = first;
-    first = first->next;
-    delete temp;
-    if (isEmpty(first)) end = nullptr;
-}
-// Просмотр первого элемента
-static int peek(Queue* first) {
-    if (isEmpty(first)) {
-        cout << "Очередь пуста.\n";
-        return 0;
+
+    int peek() const {
+        if (isEmpty()) {
+            cout << "Очередь пуста.\n";
+            return 0;
+        }
+        return front->data;
     }
-    return first->data;
-}
-// Вывод всей очереди
-static void queuePrint(Queue* first) {
-    if (isEmpty(first)) {
-        cout << "Очередь пуста.\n";
-        return;
+
+    void queuePrint() const {
+        if (isEmpty()) {
+            cout << "Очередь пуста.\n";
+            return;
+        }
+        Node* temp = front;
+        while (temp) {
+            cout << temp->data << " ";
+            temp = temp->next;
+        }
+        cout << endl;
     }
-    Queue* temp = first;
-    while (temp) {
-        cout << temp->data << " ";
-        temp = temp->next;
+
+    void popLast() {
+        if (isEmpty()) {
+            cout << "Очередь пуста, удалять нечего.\n";
+            return;
+        }
+        if (front == back) { // Если всего один элемент
+            delete front;
+            front = back = nullptr;
+            return;
+        }
+        Node* temp = front;
+        while (temp->next != back) {
+            temp = temp->next;
+        }
+        delete back;
+        back = temp;
+        back->next = nullptr;
     }
-    cout << endl;
-}
+
+    void generateQueue(int n) {
+        srand(time(0));
+        for (int i = 0; i < n; i++) {
+            int randomValue = rand() % 101 - 50; // числа от -50 до 50
+            push(randomValue);
+        }
+    }
+};
+
 static void task1() {
-    Queue* first = nullptr;
-    Queue* end = nullptr;
+    Queue queue;
 
     while (true) {
         cout << endl;
@@ -90,20 +122,19 @@ static void task1() {
         switch (choice) {
         case 1: {
             int value = input_check("Введите значение: ", INT_MIN, INT_MAX);
-            push(first, end, value);
+            queue.push(value);
             cout << endl;
             break;
         }
         case 2:
-            pop(first, end);
+            queue.pop();
             cout << endl;
             break;
         case 3:
-            cout << "Первый элемент: " << peek(first) << endl;
-            cout << endl;
+            cout << "Первый элемент: " << queue.peek() << endl;
             break;
         case 4:
-            queuePrint(first);
+            queue.queuePrint();
             cout << endl;
             break;
         case 0:
@@ -111,50 +142,22 @@ static void task1() {
         }
     }
 }
-
-// Удаление последнего элемента очереди
-static void popLast(Queue*& first, Queue*& end) {
-    if (isEmpty(first)) {
-        cout << "Очередь пуста, удалять нечего.\n";
-        return;
-    }
-    if (first == end) { // Если всего один элемент
-        delete first;
-        first = end = nullptr;
-        return;
-    }
-    Queue* temp = first;
-    while (temp->next != end) {
-        temp = temp->next;
-    }
-    delete end;
-    end = temp;
-    end->next = nullptr;
-}
-// Создание очереди с n случайными числами из диапазона [-50, 50]
-static void generateQueue(Queue*& first, Queue*& end, int n) {
-    srand(time(0));
-    for (int i = 0; i < n; i++) {
-        int randomValue = rand() % 101 - 50; // числа от -50 до 50
-        push(first, end, randomValue);
-    }
-}
 static void task2() {
-    Queue* first = nullptr;
-    Queue* end = nullptr;
+    Queue queue;
 
     int n = input_check("Введите количество элементов в очереди: ", 1, 100);
-    generateQueue(first, end, n);
+    queue.generateQueue(n);
 
     cout << "Сгенерированная очередь:\n";
-    queuePrint(first);
+    queue.queuePrint();
 
-    pop(first, end);
-    popLast(first, end);
+    queue.pop();
+    queue.popLast();
 
     cout << "Очередь после удаления первого и последнего элемента:\n";
-    queuePrint(first);
+    queue.queuePrint();
 }
+
 
 struct List {
     int data;
