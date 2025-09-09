@@ -1,0 +1,76 @@
+// 1 часть
+import java.util.Scanner;
+public class Main1 {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Введите первое целое число: ");
+        int a = scanner.nextInt();
+        System.out.print("Введите второе целое число: ");
+        int b = scanner.nextInt();
+        System.out.print("Введите третье целое число: ");
+        int c = scanner.nextInt();
+
+        int max = (a > b) ? a : b;
+        max = (max > c) ? max : c;
+        int min = (a < b) ? a : b;
+        min = (min < c) ? min : c;
+
+        double average = (max + min) / 2.0;
+        System.out.print("Среднее значение между ними: " + average);
+    }
+}
+
+// 2 часть
+import java.util.Scanner;
+public class Main2 {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Введите х: ");
+        double x = scanner.nextDouble();
+
+        // 1
+        double a = 4.2;
+        double b = 5.3;
+        double c = 1.5;
+        double y = 0;
+
+        if (a + b > x){
+            y = Math.sin(Math.exp(a + b)) + x * x;
+        } 
+        else if(a + b == x){
+            y = Math.atan(a * b * c) + Math.cbrt(x);
+        }
+        else{
+            y = Math.cos(Math.sqrt(Math.abs(x + a * b * c)));
+        }
+        System.out.println("1. y = " + y);
+
+        // 2
+        a = -0.35; b = 1.8; c = -1.8; y = 0;
+
+        if (a + b > x){
+            y = Math.sin(Math.exp(a + b)) + x * x;
+        } 
+        else if(a + b == x){
+            y = Math.atan(a * b * c) + Math.cbrt(x);
+        }
+        else{
+            y = Math.cos(Math.sqrt(Math.abs(x + a * b * c)));
+        }
+        System.out.println("2. y = " + y);
+
+        // 3
+        a = 2.8; b = -0.6; c = 2; y = 0;
+
+        if (a + b > x){
+            y = Math.sin(Math.exp(a + b)) + x * x;
+        } 
+        else if(a + b == x){
+            y = Math.atan(a * b * c) + Math.cbrt(x);
+        }
+        else{
+            y = Math.cos(Math.sqrt(Math.abs(x + a * b * c)));
+        }
+        System.out.print("3. y = " + y);
+    }
+}
