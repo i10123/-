@@ -1,0 +1,210 @@
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <ctime>
+#include <algorithm>
+#include <iomanip>
+
+using namespace std;
+
+static int input_check(string message, int min, int max) {
+    int input;
+    while (true) {
+        cout << message;
+        cin >> input;
+
+        if (cin.fail() || input < min || input > max) {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка ввода! Введите число от " << min << " до " << max << ".\n";
+        }
+        else {
+            return input;
+        }
+    }
+}
+
+// выделение динамической памяти для матрицы
+template<typename T>
+T** createMatrix(int n, int m) {
+    T** matrix = new T * [n];
+    for (int i = 0; i < n; i++) {
+        matrix[i] = new T[m];
+    }
+    return matrix;
+}
+// очистка памяти матрицы
+template<typename T>
+void deleteMatrix(T** matrix, int n) {
+    for (int i = 0; i < n; i++) {
+        delete[] matrix[i];
+    }
+    delete[] matrix;
+}
+// генерация случайных значений в матрице
+template<typename T>
+void generateMatrix(T** matrix, int n, int m, T minRange, T maxRange) {
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            matrix[i][j] = minRange + rand() % (maxRange - minRange + 1);
+}
+// копирование матрицы
+template<typename T>
+T** copyMatrix(T** original, int n, int m) {
+    T** copy = createMatrix<T>(n, m);
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            copy[i][j] = original[i][j];
+    return copy;
+}
+// вывод матрицы
+template<typename T>
+void print(T** matrix, int n, int m) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++)
+            cout << setw(4) << right << matrix[i][j];
+        cout << endl;
+    }
+}
+// вычитание двух матриц
+template<typename T>
+T** diff(T** A, T** B, int n, int m) {
+    T** result = createMatrix<T>(n, m);
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            result[i][j] = A[i][j] - B[i][j];
+    return result;
+}
+// поиск минимального положительного элемента
+template<typename T>
+T search(T** matrix, int n, int m) {
+    T min_pos = numeric_limits<T>::max();
+    bool found = false;
+
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            if (matrix[i][j] > 0 && matrix[i][j] < min_pos) {
+                min_pos = matrix[i][j];
+                found = true;
+            }
+
+    return found ? min_pos : -1;
+}
+// замена всех положительных элементов их противоположными
+template<typename T>
+void replace(T** matrix, int n, int m) {
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            if (matrix[i][j] > 0)
+                matrix[i][j] = -matrix[i][j];
+}
+// сортировка столбцов по убыванию их минимального элемента
+template<typename T>
+void sort(T** matrix, int n, int m) {
+    T* minValues = new T[m];
+    int* indices = new int[m];
+
+    for (int j = 0; j < m; j++) {
+        T min_elem = numeric_limits<T>::max();
+        for (int i = 0; i < n; i++)
+            min_elem = min(min_elem, matrix[i][j]);
+        minValues[j] = min_elem;
+        indices[j] = j;
+    }
+
+    // Сортировка индексов столбцов по убыванию минимальных значений
+    for (int i = 0; i < m - 1; i++) {
+        for (int j = i + 1; j < m; j++) {
+            if (minValues[i] < minValues[j]) {
+                swap(minValues[i], minValues[j]);
+                swap(indices[i], indices[j]);
+            }
+        }
+    }
+
+    // Перестановка столбцов в соответствии с отсортированными индексами
+    T** sortedMatrix = createMatrix<T>(n, m);
+    for (int j = 0; j < m; j++)
+        for (int i = 0; i < n; i++)
+            sortedMatrix[i][j] = matrix[i][indices[j]];
+
+    // Копируем данные обратно
+    for (int j = 0; j < m; j++)
+        for (int i = 0; i < n; i++)
+            matrix[i][j] = sortedMatrix[i][j];
+
+    deleteMatrix(sortedMatrix, n);
+    delete[] minValues;
+    delete[] indices;
+}
+
+template<typename T>
+void menu() {
+    srand(time(0));
+
+    int n = input_check("Введите количество строк: ", 1, 10);
+    int m = input_check("Введите количество столбцов: ", 1, 10);
+    cout << "Введите диапазон случайных значений" << endl;
+    T minRange = input_check("Минимум: ", -100, 100);
+    T maxRange = input_check("Максимум: ", -100, 100);
+
+    // Создание матрицы A
+    T** A = createMatrix<T>(n, m);
+    generateMatrix(A, n, m, minRange, maxRange);
+    T** A_orig = copyMatrix(A, n, m);
+    cout << "\nМатрица A:\n"; // Сохранение оригинальной матрицы
+    print(A, n, m);
+
+    int choice;
+    do {
+        cout << "\nВыберите операцию:\n";
+        cout << "1. Вычитание двух матриц\n";
+        cout << "2. Поиск минимального положительного элемента\n";
+        cout << "3. Замена всех положительных элементов их противоположными\n";
+        cout << "4. Сортировка столбцов по убыванию\n";
+        cout << "5. Выход\n";
+        choice = input_check("Введите номер: ", 1, 5);
+
+        switch (choice) {
+        case 1: {
+            T** B = createMatrix<T>(n, m);
+            generateMatrix(B, n, m, minRange, maxRange);
+            cout << "\nМатрица B:\n";
+            print(B, n, m);
+
+            T** result = diff(A, B, n, m);
+            cout << "\nРезультат вычитания A - B:\n";
+            print(result, n, m);
+
+            deleteMatrix(B, n);
+            deleteMatrix(result, n);
+            break;
+        }
+        case 2:
+            cout << "\nМинимальный положительный элемент в A: " << search(A, n, m) << endl;
+            break;
+        case 3:
+            replace(A, n, m);
+            cout << "\nМатрица A после замены положительных элементов:\n";
+            print(A, n, m);
+            break;
+        case 4:
+            sort(A_orig, n, m);
+            cout << "\nМатрица A после сортировки:\n";
+            print(A_orig, n, m);
+            break;
+        case 5:
+            cout << "Выход из программы.\n";
+            break;
+        }
+    } while (choice != 5);
+
+    // Очистка памяти перед завершением
+    deleteMatrix(A, n);
+}
+
+int main() {
+    setlocale(LC_ALL, "RU");
+    menu<int>();
+    return 0;
+}
