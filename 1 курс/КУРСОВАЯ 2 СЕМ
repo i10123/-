@@ -1,1 +1,1292 @@
+#include <iostream>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <ctime>
+#include <conio.h>  // для _getch()
+#include <windows.h>
+#include <cmath>
+#include <iomanip>
+#include <map>
+#include <algorithm>
+#include <set>
 
+using namespace std;
+
+// Константы цветов текста
+const string GREEN = "\033[32m";
+const string RED = "\033[31m";
+const string YELLOW = "\033[33m";
+const string PURPLE = "\033[35m";
+const string BLUE = "\033[36m";
+const string RESET = "\033[0m";     // дефолтный
+const string B = "\033[1m";         // жирный
+
+// центрирование консоли
+static void CenterConsole(int consoleWidth, int consoleHeight) {
+    HWND consoleWindow = GetConsoleWindow(); // Получаем дескриптор окна консоли
+    RECT screenRect;
+    GetWindowRect(GetDesktopWindow(), &screenRect); // Получаем размер экрана
+
+    int screenWidth = screenRect.right;  // Определяем ширину экрана
+    int screenHeight = screenRect.bottom; // Определяем высоту экрана
+
+    // Вычисляем координаты центра
+    int x = (screenWidth - consoleWidth) / 2;
+    int y = (screenHeight - consoleHeight) / 2;
+
+    // Перемещаем окно консоли в центр экрана
+    MoveWindow(consoleWindow, x, y, consoleWidth, consoleHeight, TRUE);
+}
+// очистка консоли
+static void clearConsole() {
+    system("cls");
+}
+// обработчик ошибок
+static int input_check_int(const string& message, int min, int max) {
+    int input;
+
+    while (true) {
+        cout << message;
+        cin >> input;
+
+        if (cin.fail() || floor(input) != input) { // floor (округление вниз)
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка ввода! Пожалуйста, введите число от " << min << " до " << max << endl;
+            continue;
+        }
+
+        if (input < min || input > max) {
+            cout << "Ошибка ввода! Пожалуйста, введите число от " << min << " до " << max << endl;
+            cin.ignore(INT_MAX, '\n');
+            continue;
+        }
+
+        cin.ignore(INT_MAX, '\n');
+        return input;
+    }
+}
+static double input_check_double(const string& message, double min, double max) {
+    double input;
+
+    while (true) {
+        cout << message;
+        cin >> input;
+
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(INT_MAX, '\n');
+            cout << "Ошибка ввода! Введите число от " << fixed << setprecision(2) << min << " до " << max << endl;
+            continue;
+        }
+
+        if (input < min || input > max) {
+            cout << "Ошибка! Значение должно быть от " << fixed << setprecision(2) << min << " до " << max << endl;
+            cin.ignore(INT_MAX, '\n');
+            continue;
+        }
+
+        cin.ignore(INT_MAX, '\n');
+        return round(input * 100) / 100; // математическое округление
+    }
+}
+// получение ДД.ММ.ГГГГ ЧЧ:ММ
+static string getNowDateTime() {
+    time_t now = time(0);   // Получаем текущее время
+    tm localTime;           // Структура для хранения 
+    localtime_s(&localTime, &now);  // Заполнение
+
+    stringstream ss;
+    ss << setw(2) << setfill('0') << localTime.tm_mday << "."
+        << setw(2) << setfill('0') << (localTime.tm_mon + 1) << "."
+        << (localTime.tm_year + 1900) << " "
+        << setw(2) << setfill('0') << localTime.tm_hour << ":"
+        << setw(2) << setfill('0') << localTime.tm_min;
+
+    return ss.str();
+}
+// проверка формата даты
+static bool checkDateFormat(const string& date) {
+    // формат ДД.ММ.ГГГГ
+    if (date.size() != 10 || date[2] != '.' || date[5] != '.') return false;
+
+    // Извлекаем день, месяц и год из строки
+    string dayStr = date.substr(0, 2);
+    string monthStr = date.substr(3, 2);
+    string yearStr = date.substr(6, 4);
+
+    // Проверяем, что все символы в извлечённых строках являются цифрами
+    for (char c : dayStr + monthStr + yearStr)
+        if (!isdigit(c)) return false;
+
+    // строка -> число
+    int day = stoi(dayStr);
+    int month = stoi(monthStr);
+    int year = stoi(yearStr);
+
+    // диапазон 
+    if (month < 1 || month > 12 || year < 1900 || year > 2100) return false;
+    vector<int> daysInMonth = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (month == 2 && (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)))
+        daysInMonth[1] = 29;
+
+    return day >= 1 && day <= daysInMonth[month - 1];
+}
+
+// вступление
+static void showWelcomeScreen() {
+    clearConsole();
+
+    cout << GREEN << B << "***************************************************************************\n";
+    cout << "*                          УЧЁТ ДОМАШНИХ ФИНАНСОВ                         *\n";
+    cout << "***************************************************************************\n\n" << RESET;
+    cout << GREEN << "Добро пожаловать! Это приложение поможет вам вести учет доходов и расходов.\n";
+    cout << "Вы можете добавлять транзакции, сортировать их и просматривать статистику.\033[0m\n\n";
+    cout << BLUE << "Нажмите " << GREEN << "Enter" << BLUE << ", чтобы продолжить или "
+        << RED << "Esc " << BLUE << "для выхода..." << RESET;
+
+    char key;
+    do {
+        key = _getch();
+        if (key == 27) exit(0); // Esc
+    } while (key != 13);        // Enter
+}
+struct Transaction {
+    string dateTime;        // Дата и Время
+    string userName;        // Имя пользователя
+    string type;            // "Доход" или "Расход"
+    double summa{};           // Сумма
+    string paymentMethod;   // "Карта" или "Наличные"
+    string category;        // Категория
+    string storeName;       // Название магазина
+    string comment;         // Комментарий
+
+    Transaction() = default;    // конструктор по умолчанию
+
+    Transaction(string user, string t, double sum, string payment, string cat, string store, string com)
+        : userName(user), type(t), summa(sum), paymentMethod(payment), category(cat), storeName(store), comment(com) {
+        dateTime = getNowDateTime(); // автозаполнение форматом: ДД.ММ.ГГГГ ЧЧ:ММ
+    }
+
+    // Функция для преобразования объекта `Transaction` в строку для сохранения в файл
+    string toTXT() const {
+        stringstream ss;
+        ss << dateTime << "," << userName << "," << type << "," << fixed << setprecision(2) << summa << "," << paymentMethod;
+        if (type == "расход") {
+            ss << "," << category << "," << storeName;
+        }
+        ss << "," << comment;
+        return ss.str();
+    }
+};
+struct Balance {
+    double totalSumma{};              // Общая сумма (нал + карты)
+    double cash{};                    // Наличные
+    double card{};                    // Деньги на картах
+    double monthExpenses{};           // Сумма всех расходов за месяц
+    double averageDayExpense{};       // Средние расходы за день
+    double averageMonthExpense{};     // Средние расходы за месяц
+
+    Balance() {
+        loadFromFile();
+    }
+
+    // Сохранение баланса в файл
+    void saveToFile() const {
+        ofstream file("balance.txt");
+        if (file) {
+            file << totalSumma << "\n"
+                << cash << "\n"
+                << card << "\n"
+                << monthExpenses << "\n"
+                << averageDayExpense << "\n"
+                << averageMonthExpense << "\n";
+        }
+        else {
+            cerr << "Ошибка сохранения данных в файл!\n";
+        }
+    }
+
+    // Функция загрузки сохранённого баланса из файла
+    void loadFromFile() {
+        ifstream file("balance.txt");
+        if (file) {
+            file >> totalSumma >> cash >> card >> monthExpenses
+                >> averageDayExpense >> averageMonthExpense;
+        }
+        else {
+            cerr << "Ошибка загрузки данных!\n";
+        }
+    }
+};
+
+class MoneyManager {
+private:
+    Balance userBalance;
+    vector<Transaction> transactions;
+
+public:
+    // 1. БАЛАНС
+    void showBalance() {
+        CenterConsole(500, 350);
+        clearConsole();
+        loadTransactions();
+        userBalance.loadFromFile();
+
+        userBalance.averageDayExpense = getAverageDayExpense(transactions);
+        userBalance.averageMonthExpense = getAverageMonthExpense(transactions);
+        userBalance.saveToFile();
+
+        struct BalanceData {
+            string name;
+            double sum;
+        };
+
+        cout << B << PURPLE << "         **ФИНАНСОВЫЙ ОТЧЕТ**\n";
+        cout << "--------------------------------------\n";
+        vector<BalanceData> data = {
+            {"Общий баланс:", userBalance.cash + userBalance.card},
+            {"Наличные:", userBalance.cash},
+            {"На картах:", userBalance.card},
+            {"Сумма расходов за месяц:", getMonthExpenses(transactions, getNowMonth(), getNowYear())},
+            {"Средний расход в день:", userBalance.averageDayExpense},
+            {"Средний расход в месяц:", userBalance.averageMonthExpense}
+        };
+        for (const auto& item : data) {
+            cout << setw(26) << left << item.name << fixed << setprecision(2) << item.sum << " BYN\n";
+            cout << "--------------------------------------\n";
+        }
+        cout << RESET;
+    }
+    // 2. ДОБАВИТЬ ТРАНЗАКЦИЮ
+    void addTransaction() {
+        CenterConsole(650, 300);
+        clearConsole();
+
+        string userName, type, paymentMethod, category, storeName, comment;
+        double summa = 0.0;
+
+        do {
+            cout << B << "Введите своё имя: ";
+            if (_getch() == 27) return; // Выход по ESC
+            getline(cin, userName);
+
+            if (userName.empty()) {
+                cout << "\nОшибка! Имя не может быть пустым. Попробуйте ещё раз.\n";
+            }
+        } while (userName.empty());
+
+        // Выбор типа транзакции
+        type = (input_check_int("Выберите тип операции (1 - Доход, 2 - Расход): ", 1, 2) == 1) ? "доход" : "расход";
+        summa = input_check_double("Введите сумму: ", 0.01, 1000000000);
+        paymentMethod = (input_check_int("Выберите способ оплаты (1 - Карта, 2 - Наличные): ", 1, 2) == 1) ? "карта" : "наличные";
+
+        if (type == "расход") {
+            cout << "Введите категорию расхода: ";
+            getline(cin, category);
+            cout << "Введите название магазина: ";
+            getline(cin, storeName);
+        }
+
+        cout << "Введите комментарий (по желанию): ";
+        getline(cin, comment);
+
+        // Коррекция баланса
+        if (type == "доход") {
+            (paymentMethod == "наличные" ? userBalance.cash : userBalance.card) += summa;
+        }
+        else {
+            userBalance.monthExpenses += summa;
+            (paymentMethod == "наличные" ? userBalance.cash : userBalance.card) -= summa;
+        }
+
+        transactions.emplace_back(userName, type, summa, paymentMethod, category, storeName, comment);
+        userBalance.totalSumma = userBalance.cash + userBalance.card;
+        userBalance.saveToFile();
+        saveTransactions();
+
+        cout << "\nТранзакция успешно добавлена!\n";
+    }
+    // 3. РЕДАКТИРОВАТЬ ТРАНЗАКЦИЮ
+    void redactTransaction() {
+        loadTransactions();
+        clearConsole();
+        CenterConsole(600, 300);
+
+        if (transactions.empty()) {
+            cout << B << "Нет транзакций для редактирования!\n";
+            return;
+        }
+
+        string Date;
+        cout << B << YELLOW << "ДЛЯ РЕДАКТИРОВАНИЯ\n" << RESET;
+
+        // Ввод даты с обработкой выхода по ESC
+        while (true) {
+            cout << B << "Введите дату транзакции(ДД.ММ.ГГГГ): ";
+            char choice = _getch();
+
+            if (choice == 27) { // Если ESC, выходим
+                cout << endl;
+                return;
+            }
+
+            getline(cin, Date);
+
+            if (checkDateFormat(Date)) break;
+            else {
+                cout << "Неверный формат даты!" << endl;
+            }
+        }
+
+        // Поиск транзакций по введённой дате
+        vector<Transaction*> listTransactions = searchTransByDate(Date);
+        if (listTransactions.empty()) {
+            cout << "Нет транзакций на эту дату!\n";
+            return;
+        }
+
+        CenterConsole(1450, 400);
+
+        // Заголовкки таблицы
+        vector<string> heads1 = { "№", "Тип", "Дата и время", "Пользователь", "Категория", "Магазин", "Сумма (BYN)", "Оплата", "Комментарий" };
+        vector<int> widths1 = { 5, 8, 20, 15, 15, 15, 15, 15, 20 };
+
+        for (size_t i = 0; i < heads1.size(); i++)
+            cout << setw(widths1[i]) << left << heads1[i];
+        cout << "\n" << string(120, '-') << endl;
+
+        // Вывод транзакций в виде таблицы
+        for (size_t i = 0; i < listTransactions.size(); i++) {
+            cout << setw(5) << left << i + 1
+                << setw(8) << left << listTransactions[i]->type
+                << setw(20) << left << listTransactions[i]->dateTime
+                << setw(15) << left << listTransactions[i]->userName
+                << setw(15) << left << (listTransactions[i]->type == "расход" ? listTransactions[i]->category : "-")
+                << setw(15) << left << (listTransactions[i]->type == "расход" ? listTransactions[i]->storeName : "-")
+                << setw(15) << left << fixed << setprecision(2) << listTransactions[i]->summa
+                << setw(15) << left << listTransactions[i]->paymentMethod
+                << setw(20) << left << listTransactions[i]->comment << endl;
+        }
+        cout << endl;
+
+        // Выбор для редактирования
+        int index = input_check_int("Введите номер транзакции для редактирования: ", 1, listTransactions.size()) - 1;
+
+        while (true) {
+            CenterConsole(750, 500);
+            clearConsole();
+
+            // Отображение информации перед редактированием
+            cout << "Редактирование транзакции:\n";
+            cout << setw(15) << left << "Дата:" << listTransactions[index]->dateTime << endl;
+            cout << setw(15) << left << "Пользователь:" << listTransactions[index]->userName << endl;
+            cout << setw(15) << left << "Тип:" << listTransactions[index]->type << endl;
+            cout << setw(15) << left << "Сумма (BYN):" << fixed << setprecision(2) << listTransactions[index]->summa << endl;
+            cout << setw(15) << left << "Категория:" << listTransactions[index]->category << endl;
+            cout << setw(15) << left << "Магазин:" << listTransactions[index]->storeName << endl;
+            cout << setw(15) << left << "Оплата:" << listTransactions[index]->paymentMethod << endl;
+            cout << setw(15) << left << "Комментарий:" << listTransactions[index]->comment << endl;
+            cout << string(50, '-') << endl;
+
+            // Меню редактирования
+            cout << "Выберите действие:\n";
+            cout << "1. Изменить имя пользователя\n";
+            cout << "2. Изменить тип транзакции (Доход/Расход)\n";
+            cout << "3. Изменить сумму\n";
+            cout << "4. Изменить категорию (только для расходов)\n";
+            cout << "5. Изменить магазин (только для расходов)\n";
+            cout << "6. Изменить способ оплаты\n";
+            cout << "7. Изменить комментарий\n";
+            cout << "8. Сохранить изменения\n";
+            cout << "9. Отменить изменения\n";
+
+            int choice = input_check_int("\nВведите номер: ", 1, 9);
+
+            switch (choice) {
+            case 1:
+                cout << "Введите новое имя пользователя: ";
+                getline(cin, listTransactions[index]->userName);
+                break;
+            case 2: {
+                listTransactions[index]->type = (input_check_int("Выберите новый тип транзакции (1 - Доход, 2 - Расход): ", 1, 2) == 1) ? "доход" : "расход";
+                if (listTransactions[index]->type == "расход") {
+                    cout << "Введите категорию расхода: ";
+                    getline(cin, listTransactions[index]->category);
+                    cout << "Введите название магазина: ";
+                    getline(cin, listTransactions[index]->storeName);
+                }
+                else {
+                    listTransactions[index]->category = "-";
+                    listTransactions[index]->storeName = "-";
+                }
+                break;
+            }
+            case 3:
+                listTransactions[index]->summa = input_check_double("Введите новую сумму: ", 0.01, 1000000000);
+                break;
+            case 4:
+                if (listTransactions[index]->type == "расход") {
+                    cout << "Введите новую категорию: ";
+                    getline(cin, listTransactions[index]->category);
+                }
+                break;
+            case 5:
+                if (listTransactions[index]->type == "расход") {
+                    cout << "Введите новый магазин: ";
+                    getline(cin, listTransactions[index]->storeName);
+                }
+                break;
+            case 6:
+                listTransactions[index]->paymentMethod = (input_check_int("Введите новый способ оплаты (1 - наличные, 2 - карта): ", 1, 2) == 1) ? "наличные" : "карта";
+                break;
+            case 7:
+                cout << "Введите новый комментарий: ";
+                getline(cin, listTransactions[index]->comment);
+                break;
+                // Сохранение изменений
+            case 8:
+                saveTransactions();
+                cout << "\nИзменения сохранены!\n";
+                return;
+                // Отмена изменений
+            case 9:
+                loadTransactions();
+                cout << "\nРедактирование отменено, изменения не сохранены!\n";
+                return;
+            }
+        }
+        cout << RESET;
+    }
+    // 4. УДАЛИТЬ ТРАНЗАКЦИЮ
+    void deleteTransaction() {
+        CenterConsole(600, 300);
+        clearConsole();
+        loadTransactions();
+
+        if (transactions.empty()) {
+            cout << B << "Нет транзакций для удаления!\n";
+            return;
+        }
+
+        string Date;
+        while (true) {
+            cout << RED << "ДЛЯ УДАЛЕНИЯ\n" << RESET;
+            cout << B << "Введите дату транзакции (ДД.ММ.ГГГГ): ";
+            char choice = _getch(); // тут баг с повторным вводом первого символа
+
+            if (choice == 27) {
+                cout << endl;
+                return;
+            }
+
+            getline(cin, Date);
+            if (checkDateFormat(Date)) break;
+            else {
+                cout << "Неверный формат даты!" << endl;
+            };
+        }
+
+        Transaction lastDeletedTransaction; // Хранение последней удаленной транзакции
+        vector<Transaction*> listTransactions; // Список транзакций за выбранную дату
+
+        while (true) {
+            CenterConsole(1500, 400);
+            clearConsole();
+
+            listTransactions = searchTransByDate(Date); // Поиск списка
+            if (listTransactions.empty()) {
+                cout << "Нет транзакций на эту дату!\n";
+                return;
+            }
+
+            // Заголовкки таблицы
+            vector<string> heads2 = { "№", "Тип", "Дата и время", "Пользователь", "Категория", "Магазин", "Сумма (BYN)", "Оплата", "Комментарий" };
+            vector<int> widths2 = { 5, 8, 20, 15, 15, 15, 15, 15, 20 };
+
+            for (size_t i = 0; i < heads2.size(); i++)
+                cout << setw(widths2[i]) << left << heads2[i];
+            cout << "\n" << string(120, '-') << endl;
+
+            // Вывод списка
+            for (size_t i = 0; i < listTransactions.size(); i++) {
+                cout << setw(5) << left << i + 1
+                    << setw(8) << left << listTransactions[i]->type
+                    << setw(20) << left << listTransactions[i]->dateTime
+                    << setw(15) << left << listTransactions[i]->userName
+                    << setw(15) << left << (listTransactions[i]->type == "расход" ? listTransactions[i]->category : "-")
+                    << setw(15) << left << (listTransactions[i]->type == "расход" ? listTransactions[i]->storeName : "-")
+                    << setw(15) << left << fixed << setprecision(2) << listTransactions[i]->summa
+                    << setw(15) << left << listTransactions[i]->paymentMethod
+                    << setw(20) << left << listTransactions[i]->comment << endl;
+            }
+
+            // Меню
+            cout << "\nВыберите действие:\n";
+            cout << "1. Удалить\n";
+            cout << "2. Восстановить последнее удаление\n";
+            cout << "3. Прекратить удаление и вернуться в меню\n";
+
+            int action = input_check_int("Введите номер действия: ", 1, 3);
+            int index;
+
+            switch (action) {
+            case 1:
+                index = input_check_int("Введите номер транзакции для удаления или 0 для удаления всех: ", 0, listTransactions.size()) - 1;
+
+                while (true) {
+                    cout << "Вы уверены, что хотите удалить "
+                        << (index == -1 ? "ВСЕ транзакции" : "транзакцию [" + to_string(index + 1) + "]")
+                        << "? (+/-): ";
+                    char confirm;
+                    cin >> confirm;
+
+                    if (confirm != '+') return; // Если нет подтверждения, выходим
+
+                    if (index == -1) {
+                        transactions.erase(remove_if(transactions.begin(), transactions.end(), [&](const Transaction& t) {
+                            return t.dateTime.substr(0, 10) == Date;
+                            }), transactions.end());
+
+                        cout << "\nВсе транзакции за " << Date << " удалены!\n";
+                    }
+                    else {
+                        // Запоминаем последнюю удалённую транзакцию
+                        lastDeletedTransaction = *listTransactions[index];
+
+                        transactions.erase(remove_if(transactions.begin(), transactions.end(), [&](const Transaction& t) {
+                            return &t == listTransactions[index];
+                            }), transactions.end());
+                    }
+
+                    saveTransactions();
+                    break;
+                }
+                break;
+
+            case 2:
+                cout << "Вы уверены, что хотите восстановить последнюю удаленную транзакцию? (+/-): ";
+                char restore;
+                cin >> restore;
+
+                if (restore == '+') {
+                    transactions.push_back(lastDeletedTransaction); // Восстанавливаем удаленную транзакцию
+                    saveTransactions();
+                    loadTransactions(); // Обновляем список
+                    lastDeletedTransaction = {}; // Очищаем данные после первого восстановления
+                }
+                break;
+            case 3: return;
+            }
+        }
+        cout << RESET;
+    }
+    // 5. ПОКАЗАТЬ ВСЕ ТРАНЗАКЦИИ
+    void showTransactions() {
+        CenterConsole(1500, 500);
+        loadTransactions();
+        clearConsole();
+
+        if (transactions.empty()) {
+            cout << "Нет транзакций!\n";
+            return;
+        }
+
+        // Заголовкки таблицы
+        vector<string> heads = { "Тип", "Дата и время", "Пользователь", "Категория", "Магазин", "Сумма (BYN)", "Оплата", "Комментарий" };
+        vector<int> widths = { 8, 20, 15, 15, 15, 15, 15, 20 };
+
+        for (size_t i = 0; i < heads.size(); i++)
+            cout << setw(widths[i]) << left << heads[i];
+        cout << "\n" << string(120, '-') << endl;
+
+        // Вывод списка транзакций
+        for (const auto& t : transactions) {
+            cout << ((t.type == "доход") ? GREEN : RED)
+                << setw(8) << left << t.type
+                << setw(20) << left << t.dateTime
+                << setw(15) << left << t.userName
+                << setw(15) << left << (t.type == "расход" ? t.category : "-")
+                << setw(15) << left << (t.type == "расход" ? t.storeName : "-")
+                << setw(15) << left << fixed << setprecision(2) << t.summa
+                << setw(15) << left << t.paymentMethod
+                << setw(20) << left << t.comment
+                << RESET << endl;
+        }
+    }
+    // 6. БЫСТРЫЙ ПЕРЕВОД МЕЖДУ СЧЕТАМИ
+    void transferBalance() {
+        CenterConsole(500, 200);
+        userBalance.loadFromFile();
+
+        char choice = 0;
+        while (true) {
+            clearConsole();
+            cout << B << BLUE << "1. Перевести с наличных на карту\n";
+            cout << "2. Перевести с карты на наличные\n";
+            cout << "\nВыберите направление перевода: ";
+
+            char choice = _getch();
+            if (choice == 27) return; // Выход по ESC
+            if (choice != '1' && choice != '2') continue;
+
+            clearConsole();
+            double amount = input_check_double("Введите сумму для перевода: ", 0.01, 1000000000.0);
+
+            // Определяем направление перевода
+            bool fromCash = (choice == '1'); // true → перевод с наличных на карту, false → наоборот
+            double& si = fromCash ? userBalance.cash : userBalance.card;
+            double& di = fromCash ? userBalance.card : userBalance.cash;
+            string directionText = fromCash ? "наличных на карту" : "карты в наличные";
+
+            if (si >= amount) { // Проверяем доступность средств
+                si -= amount;
+                di += amount;
+                userBalance.saveToFile();
+
+                cout << GREEN << "\nПеревод выполнен: " << amount << " BYN с " << directionText << ".\n" << RESET;
+            }
+            else
+                cout << RED << "\nОшибка: недостаточно средств!\n" << RESET;
+            return;
+        }
+    }
+    // 7. ПОИСК
+    void search() {
+        CenterConsole(400, 250);
+        loadTransactions();
+
+        string searchCategory;
+        vector<Transaction*> results;
+
+        while (true) {
+            clearConsole();
+            cout << B << "      ПОИСК ТРАНЗАКЦИЙ\n";
+            cout << "=============================\n";
+            cout << "1 - Поиск по дате\n";
+            cout << "2 - Поиск по категории\n";
+            cout << "3 - Поиск по магазину\n";
+            cout << "4 - Поиск по сумме\n";
+            cout << "5 - Поиск по ключевому слову\n";
+            cout << "=============================\n";
+            cout << "Выберите вариант поиска: ";
+
+            char choice = _getch();
+            if (choice == 27) {
+                cout << endl;
+                return;
+            }
+
+            if (choice != '1' && choice != '2' && choice != '3' && choice != '4' && choice != '5') {
+                continue;
+            }
+
+            clearConsole();
+
+            if (transactions.empty()) {
+                cout << B << RED << "Нет транзакций для поиска!\n" << RESET;
+                return;
+            }
+
+            CenterConsole(1450, 400);
+
+            switch (choice) {
+            case '1': // Поиск по дате
+                do {
+                    cout << B << "Введите дату транзакции (ДД.ММ.ГГГГ): ";
+                    getline(cin, searchCategory);
+                } while (!checkDateFormat(searchCategory));
+                results = searchTransByDate(searchCategory);
+                break;
+            case '2': // Поиск по категории
+                cout << "Введите категорию (еда, транспорт, подписки и т. д.): ";
+                getline(cin, searchCategory);
+                results = searchTransByCategory(searchCategory);
+                break;
+            case '3': // Поиск по магазину
+                cout << "Введите название магазина: ";
+                getline(cin, searchCategory);
+                results = searchTransByStore(searchCategory);
+                break;
+            case '4': { // Поиск по сумме (диапазон)
+                double minAmount, maxAmount;
+                cout << "Введите минимальную сумму: ";
+                cin >> minAmount;
+                cout << "Введите максимальную сумму: ";
+                cin >> maxAmount;
+                cin.ignore();
+                results = searchTransByAmount(minAmount, maxAmount);
+                break;
+            }
+            case '5': // Поиск по ключевому слову в комментариях
+                cout << "Введите ключевое слово: ";
+                getline(cin, searchCategory);
+                results = searchTransByKeyword(searchCategory);
+                break;
+            }
+
+            if (results.empty()) {
+                cout << RED << "\nТранзакции не найдены!\n" << RESET;
+                return;
+            }
+
+            // Заголовки таблицы
+            vector<string> heads3 = { "№", "Дата", "Пользователь", "Тип", "Сумма (BYN)", "Категория", "Магазин", "Оплата", "Комментарий" };
+            vector<int> widths3 = { 4, 18, 15, 8, 15, 15, 15, 10, 30 };
+
+            cout << string(120, '=') << endl;
+            for (size_t i = 0; i < heads3.size(); i++)
+                cout << setw(widths3[i]) << left << heads3[i];
+            cout << "\n" << string(120, '-') << endl;
+
+            size_t index = 1;
+            for (const auto& t : results) {
+                cout << setw(4) << left << index++
+                    << setw(18) << left << t->dateTime
+                    << setw(15) << left << t->userName
+                    << setw(8) << left << t->type
+                    << setw(15) << left << fixed << setprecision(2) << t->summa
+                    << setw(15) << left << t->category
+                    << setw(15) << left << t->storeName
+                    << setw(10) << left << t->paymentMethod
+                    << setw(30) << left << t->comment << endl;
+            }
+            cout << string(120, '=') << endl << RESET;
+            return;
+        }
+    }
+    // 8. ФИЛЬТРЫ
+    void filter() {
+        CenterConsole(400, 250);
+        loadTransactions();
+
+        // Копируем указатели на объекты транзакций
+        vector<Transaction*> filteredTransactions;
+        filteredTransactions.reserve(transactions.size()); // Улучшает производительность копирования
+        for (auto& t : transactions) {
+            filteredTransactions.push_back(&t);
+        }
+
+        string typeFilter, paymentFilter;
+        char sortChoice, typeChoice, paymentChoice, dateSortChoice;
+
+        while (true) {
+            clearConsole();
+            cout << B << "     ФИЛЬТРЫ ТРАНЗАКЦИЙ\n";
+            cout << "=============================\n";
+            cout << "1. Фильтр по пользователю\n";
+            cout << "2. Фильтр по цене\n";
+            cout << "3. Фильтр по дате\n";
+            cout << "4. Фильтр по типу транзакции\n";
+            cout << "5. Фильтр по способу оплаты\n";
+            cout << "=============================\n";
+            cout << "Выберите фильтр: ";
+
+            char choice = _getch();
+            if (choice == 27) return;
+            if (choice < '1' || choice > '5') continue;
+
+            clearConsole();
+
+            if (transactions.empty()) {
+                cout << B << RED << "Нет транзакций для фильтрации!\n" << RESET;
+                return;
+            }
+
+            string filterQuery;
+
+            // Сортируем транзакции по дате (по умолчанию — новые сверху)
+            sort(filteredTransactions.begin(), filteredTransactions.end(), [](Transaction* a, Transaction* b) {
+                return a->dateTime > b->dateTime;
+                });
+
+            CenterConsole(1450, 400);
+
+            switch (choice) {
+            case '1': // Фильтр по пользователю
+                cout << "Введите имя пользователя: ";
+                getline(cin, filterQuery);
+                filteredTransactions.erase(remove_if(filteredTransactions.begin(), filteredTransactions.end(),
+                    [&filterQuery](Transaction* t) { return t->userName != filterQuery; }), filteredTransactions.end());
+                break;
+
+            case '2': // Сортировка по цене
+                while (true) {
+                    cout << "Выберите сортировку (1 - По возрастанию, 2 - По убыванию): ";
+                    sortChoice = _getch();
+                    if (sortChoice != '1' && sortChoice != '2') {
+                        clearConsole();
+                        continue;
+                    }
+                    sort(filteredTransactions.begin(), filteredTransactions.end(),
+                        [sortChoice](Transaction* a, Transaction* b) { return (sortChoice == '1') ? a->summa < b->summa : a->summa > b->summa; });
+                    break;
+                }
+                break;
+
+            case '3': // Фильтр по дате 
+                cout << "Выберите порядок (1 - Новые, 2 - Старые): ";
+                dateSortChoice = _getch();
+                if (sortChoice != '1' && sortChoice != '2') {
+                    clearConsole();
+                    continue;
+                }
+                sort(filteredTransactions.begin(), filteredTransactions.end(),
+                    [dateSortChoice](Transaction* a, Transaction* b) { return (dateSortChoice == '1') ? a->dateTime > b->dateTime : a->dateTime < b->dateTime; });
+                break;
+
+            case '4': // Фильтр по типу
+                cout << "Выберите тип (1 - Доход, 2 - Расход): ";
+                typeChoice = _getch();
+                if (sortChoice != '1' && sortChoice != '2') {
+                    clearConsole();
+                    continue;
+                }
+                typeFilter = (typeChoice == '1') ? "доход" : "расход";
+                filteredTransactions.erase(remove_if(filteredTransactions.begin(), filteredTransactions.end(),
+                    [&typeFilter](Transaction* t) { return t->type != typeFilter; }), filteredTransactions.end());
+                break;
+
+            case '5': // Фильтр по способу оплаты
+                cout << "Выберите способ оплаты (1 - Наличные, 2 - Карта): ";
+                paymentChoice = _getch();
+                if (sortChoice != '1' && sortChoice != '2') {
+                    clearConsole();
+                    continue;
+                }
+                paymentFilter = (paymentChoice == '1') ? "наличные" : "карта";
+                filteredTransactions.erase(remove_if(filteredTransactions.begin(), filteredTransactions.end(),
+                    [&paymentFilter](Transaction* t) { return t->paymentMethod != paymentFilter; }), filteredTransactions.end());
+                break;
+            }
+
+            // Вывод транзакций
+            if (filteredTransactions.empty()) {
+                cout << RED << "\nНет транзакций по заданному фильтру!\n" << RESET;
+                return;
+            }
+            // Заголовки таблицы
+            vector<string> heads4 = { "№", "Дата", "Пользователь", "Тип", "Сумма (BYN)", "Категория", "Магазин", "Оплата", "Комментарий" };
+            vector<int> widths4 = { 4, 18, 15, 8, 15, 15, 15, 10, 30 };
+
+            cout << string(120, '=') << endl;
+            for (size_t i = 0; i < heads4.size(); i++)
+                cout << setw(widths4[i]) << left << heads4[i];
+            cout << "\n" << string(120, '-') << endl;
+
+            size_t index = 1;
+            for (const auto& t : filteredTransactions) {
+                cout << setw(4) << left << index++
+                    << setw(18) << left << t->dateTime
+                    << setw(15) << left << t->userName
+                    << setw(8) << left << t->type
+                    << setw(15) << left << fixed << setprecision(2) << t->summa
+                    << setw(15) << left << t->category
+                    << setw(15) << left << t->storeName
+                    << setw(10) << left << t->paymentMethod
+                    << setw(30) << left << t->comment << endl;
+            }
+            cout << string(120, '=') << endl << RESET;
+            return;
+        }
+    }
+    // 9. СТАТИСТИКА
+    void showStatistics() {
+        CenterConsole(700, 400);
+        loadTransactions();
+        clearConsole();
+        userBalance.loadFromFile();
+
+        double totalBalance = userBalance.cash + userBalance.card;
+        double totalExpenses = 0, totalIncome = 0, maxExpense = 0;
+        string maxExpenseItem = "", topCategory = "", topStore = "";
+
+        map<string, double> categoryExpenses;
+        map<string, int> storeCount;
+        map<string, bool> incomeMonths; // хранение месяцев с доходами
+
+        // Анализ транзакций
+        for (const auto& t : transactions) {
+            string monthYear = t.dateTime.substr(3, 7); // "MM.ГГГГ"
+
+            // общий доход
+            if (t.type == "доход") {
+                totalIncome += t.summa;
+                incomeMonths[monthYear] = true; // Записываем, что в этом месяце был доход
+            }
+            else {
+                // общий расход
+                totalExpenses += t.summa;
+                categoryExpenses[t.category] += t.summa;
+                storeCount[t.storeName]++;
+
+                // самая дорога покупка + категория + магазин
+                if (t.summa > maxExpense) {
+                    maxExpense = t.summa;
+                    maxExpenseItem = t.category + " (" + t.storeName + ")";
+                }
+            }
+        }
+
+        // Средний доход за месяц
+        int activeIncomeMonths = incomeMonths.size(); // Количество уникальных месяцев с доходом
+        double avgMonthIncome = (activeIncomeMonths > 0) ? totalIncome / activeIncomeMonths : 0.0;
+
+        // Определение самой затратной категории
+        if (!categoryExpenses.empty()) {
+            topCategory = max_element(categoryExpenses.begin(), categoryExpenses.end(),
+                [](const auto& a, const auto& b) { return a.second < b.second; })->first;
+        }
+
+        // Определение самого популярного магазина
+        if (!storeCount.empty()) {
+            topStore = max_element(storeCount.begin(), storeCount.end(),
+                [](const auto& a, const auto& b) { return a.second < b.second; })->first;
+        }
+
+        // Сравнение с предыдущими месяцами
+        double backMonthExpenses = getMonthExpenses(transactions, getNowMonth() - 1, getNowYear());
+        double backMonthIncome = getIncomeForMonth(transactions, getNowMonth() - 1, getNowYear());
+
+        double expenseDifference = totalExpenses - backMonthExpenses;
+        double incomeDifference = totalIncome - backMonthIncome;
+
+        // Предупреждения о рисках
+        bool budgetRisk = totalExpenses > totalBalance * 0.8;
+        bool negativeBudget = totalExpenses > totalBalance;
+
+        // Вывод статистики
+        cout << B << BLUE << "               **СТАТИСТИКА ФИНАНСОВ** \n";
+        cout << string(55, '=') << "\n";
+        cout << setw(28) << left << "Общая сумма доходов: " << fixed << setprecision(2) << totalIncome << " BYN\n";
+        cout << setw(28) << left << "Средний доход за месяц: " << fixed << setprecision(2) << avgMonthIncome << " BYN\n";
+        cout << setw(28) << left << "Общая сумма расходов: " << fixed << setprecision(2) << totalExpenses << " BYN\n";
+        cout << setw(28) << left << "Самая крупная покупка: " << maxExpenseItem << " (" << maxExpense << " BYN)\n";
+        cout << setw(28) << left << "Самая затратная категория: " << topCategory << "\n";
+        cout << setw(28) << left << "Самый популярный магазин: " << topStore << "\n";
+        cout << string(55, '=') << "\n";
+
+        // Сравнение с предыдущим месяцем
+        cout << "Сравнение с предыдущим месяцем:\n";
+        cout << setw(10) << left << "Расходы: " << ((expenseDifference >= 0) ? "[+] увеличились на " : "[-] снизились на ")
+            << abs(expenseDifference) << " BYN\n";
+        cout << setw(10) << left << "Доходы: " << ((incomeDifference >= 0) ? "[+] увеличились на " : "[-] снизились на ")
+            << abs(incomeDifference) << " BYN\n";
+        cout << string(55, '=') << "\n" << RESET;
+
+        if (budgetRisk) cout << B << RED << "\n! ! ! Внимание: расходы превышают 80% от доходов!\n" << RESET;
+        if (negativeBudget) cout << B << RED << "\n! ! ! Срочное предупреждение: бюджет отрицательный!\n" << RESET;
+    }
+    // 0. НАСТРОЙКИ
+    void setupSettings() {
+        CenterConsole(700, 350);
+        clearConsole();
+
+        cout << "Нажмите Esc, чтобы выйти, или продолжите...\n";
+        char choice = _getch();
+        if (choice == 27) {
+            cout << endl;
+            return;
+        }
+        clearConsole();
+
+        cout << "Примечание: при обновлении баланса меняется ТОЛЬКО баланс\n\n";
+        cout << "                 **НАСТРОЙКИ ФИНАНСОВ**\n";
+        cout << "---------------------------------------------------------\n";
+
+        int cardCount = input_check_int("Введите количество карт: ", 0, 100);
+
+        double newCardAmount = 0, cardBalance, newCashAmount;
+        for (int i = 0; i < cardCount; i++) {
+            string cardstr = "Введите остаток на карте " + to_string(i + 1) + ": ";
+            cardBalance = input_check_double(cardstr, 0.01, 10000000);
+            newCardAmount += cardBalance;
+        }
+
+        newCashAmount = input_check_double("Введите сумму наличных: ", 0.01, 10000000);
+        double newTotalSumma = newCashAmount + newCardAmount;
+
+        cout << "\nВы уверены, что хотите сохранить изменения? (+/-): ";
+        char confirm;
+        cin >> confirm;
+
+        if (confirm == '+') {
+            userBalance.card = newCardAmount;
+            userBalance.cash = newCashAmount;
+            userBalance.totalSumma = newTotalSumma;
+            userBalance.saveToFile();
+            cout << "\nНастройки сохранены!\n";
+        }
+        else {
+            cout << "\nИзменения отменены!\n";
+        }
+    }
+
+
+    // загрузка сохраненных транзакций
+    void loadTransactions() {
+        transactions.clear();
+
+        ifstream file("transactions.txt");
+        if (!file) {
+            cout << "Нет сохраненных транзакций!\n";
+            return;
+        }
+
+        string line;
+        while (getline(file, line)) { // читаем построчно
+            stringstream ss(line);    // поток для обработки строки
+            string dateTime, userName, type, summaStr, paymentMethod, category, storeName, comment;
+
+            // извлекаем данные из строки
+            getline(ss, dateTime, ',');
+            getline(ss, userName, ',');
+            getline(ss, type, ',');
+            getline(ss, summaStr, ',');
+            getline(ss, paymentMethod, ',');
+            if (type == "расход") {
+                getline(ss, category, ',');
+                getline(ss, storeName, ',');
+            }
+            else {
+                category = "-";
+                storeName = "-";
+            }
+
+            getline(ss, comment, ',');
+            // создание объекта и добаление в список
+            transactions.emplace_back(userName, type, stod(summaStr), paymentMethod, category, storeName, comment);
+            transactions.back().dateTime = dateTime;
+        }
+        file.close();
+    }
+    // Функция сохранения изменений в файл
+    void saveTransactions() {
+        ofstream file("transactions.txt", ios::trunc);
+
+        if (file) {
+            // перезаписываем
+            for (const auto& t : transactions) {
+                file << t.toTXT() << endl;
+            }
+            file.close();
+        }
+        else {
+            cout << "\nОшибка записи в файл!\n";
+        }
+    }
+    // общий расход за месяц
+    double getMonthExpenses(const vector<Transaction>& transactions, int month, int year) {
+        if (transactions.empty()) return 0.0; // есть ли вообще транзакции
+
+        double total = 0;
+        for (const auto& t : transactions) {
+            int transMonth = stoi(t.dateTime.substr(3, 2));
+            int transYear = stoi(t.dateTime.substr(6, 4));
+
+            if (transMonth == month && transYear == year && t.type == "расход") {
+                total += t.summa;
+            }
+        }
+        return total;
+    }
+    // средний расход в день
+    double getAverageDayExpense(const vector<Transaction>& transactions) {
+        if (transactions.empty()) return 0.0; // есть ли вообще транзакции
+
+        double total = getMonthExpenses(transactions, getNowMonth(), getNowYear()); // общая сумма расходов
+        int nowDay = getNowDay();   // номер текущего дня
+        return (nowDay > 0) ? (total / nowDay) : 0.0;
+    }
+    // средний расход в месяц
+    double getAverageMonthExpense(const vector<Transaction>& transactions) {
+        if (transactions.empty()) return 0.0;
+
+        double total = 0;
+        int minMonth = 12, minYear = 2100; // Самые поздние возможные значения
+        int maxMonth = 1, maxYear = 1900;  // Самые ранние возможные значения
+
+        for (const auto& t : transactions) {
+            if (t.type == "расход") {
+                int transMonth = stoi(t.dateTime.substr(3, 2));
+                int transYear = stoi(t.dateTime.substr(6, 4));
+
+                total += t.summa;
+
+                // самая ранняя транзакция
+                if (transYear < minYear) {
+                    minYear = transYear;
+                    minMonth = transMonth;
+                }
+
+                // самая поздняя транзакция
+                if (transYear > maxYear) {
+                    maxYear = transYear;
+                    maxMonth = transMonth;
+                }
+            }
+        }
+        if (minYear == 2100) {
+            minYear = maxYear;
+            minMonth = maxMonth;
+        }
+
+        // Вычисляем количество месяцев в диапазоне
+        int totalMonths = (maxYear - minYear) * 12 + (maxMonth - minMonth) + 1;
+
+        return (totalMonths > 0) ? (total / totalMonths) : 0.0;
+    }
+    // доход за месяц
+    double getIncomeForMonth(const vector<Transaction>& transactions, int month, int year) {
+        if (transactions.empty()) return 0.0;
+
+        double totalIncome = 0;
+        for (const auto& t : transactions) {
+            int transMonth = stoi(t.dateTime.substr(3, 2));
+            int transYear = stoi(t.dateTime.substr(6, 4));
+
+            if (transMonth == month && transYear == year && t.type == "доход") {
+                totalIncome += t.summa;
+            }
+        }
+        return totalIncome;
+    }
+
+    // получение текущего дня, месяца, года
+    tm getLocalTime() {
+        time_t now = time(0); // количество секунд с 1 января 1970 года
+        tm localTime;
+        localtime_s(&localTime, &now); // преобразует now (Unix-время) в структуру tm
+        return localTime;
+    }
+    int getNowDay() {
+        return getLocalTime().tm_mday;
+    }
+    int getNowMonth() {
+        return getLocalTime().tm_mon + 1;
+    }
+    int getNowYear() {
+        return getLocalTime().tm_year + 1900;
+    }
+
+    // поиск транзакций по дате
+    vector<Transaction*> searchTransByDate(const string& Date) {
+        if (transactions.empty()) return {};
+
+        vector<Transaction*> filteredTransactions;
+        for (auto& t : transactions) {
+            if (t.dateTime.substr(0, 10) == Date) {
+                filteredTransactions.push_back(&t);
+            }
+        }
+        return filteredTransactions;
+    }
+    // поиск транзакций по категориям
+    vector<Transaction*> searchTransByCategory(const string& targetCategory) {
+        if (transactions.empty()) return {};
+
+        vector<Transaction*> filteredTransactions;
+        for (auto& t : transactions) {
+            if (t.category == targetCategory) {
+                filteredTransactions.push_back(&t);
+            }
+        }
+        return filteredTransactions;
+    }
+    // поиск транзакций по магазину
+    vector<Transaction*> searchTransByStore(const string& targetStore) {
+        if (transactions.empty()) return {};
+
+        vector<Transaction*> filteredTransactions;
+        for (auto& t : transactions) {
+            if (t.storeName == targetStore) {
+                filteredTransactions.push_back(&t);
+            }
+        }
+        return filteredTransactions;
+    }
+    // поиск транзакций по сумме (диапазон)
+    vector<Transaction*> searchTransByAmount(double minAmount, double maxAmount) {
+        if (transactions.empty()) return {};
+
+        vector<Transaction*> filteredTransactions;
+        for (auto& t : transactions) {
+            if (t.summa >= minAmount && t.summa <= maxAmount) {
+                filteredTransactions.push_back(&t);
+            }
+        }
+        return filteredTransactions;
+    }
+    // поиск по ключевому слову в комментариях
+    vector<Transaction*> searchTransByKeyword(const string& keyword) {
+        if (transactions.empty()) return {};
+
+        vector<Transaction*> filteredTransactions;
+        for (auto& t : transactions) {
+            if (t.comment.find(keyword) != string::npos) { // Проверяем, содержит ли комментарий ключевое слово
+                filteredTransactions.push_back(&t);
+            }
+        }
+        return filteredTransactions;
+    }
+
+    void showMenu() {
+        cout << B << YELLOW << "Esc - Выход\n\n";
+        cout << "========= Главное меню =========\n";
+        cout << "1. Баланс\n";
+        cout << "2. Добавить транзакцию\n";
+        cout << "3. Редактировать транзакцию\n";
+        cout << "4. Удалить транзакцию\n";
+        cout << "5. Показать все транзакции\n";
+        cout << "6. Быстрый перевод между счетами\n";
+        cout << "7. Поиск\n";
+        cout << "8. Фильтры\n";
+        cout << "9. Статистика\n";
+        cout << "0. Настройки\n";
+        cout << "Выберите действие:" << RESET;
+    }
+};
+
+// Главная функция
+static void Menu(MoneyManager& money_manager) {
+    while (true) {
+        CenterConsole(400, 300);
+        clearConsole();
+        money_manager.showMenu();
+
+        char choice = _getch();
+        if (choice == 27) break; // Esc для выхода
+
+        if (!isdigit(choice)) continue;
+
+        clearConsole();
+        switch (choice) {
+        case '1': { money_manager.showBalance(); break; }
+        case '2': { money_manager.addTransaction(); break; }
+        case '3': { money_manager.redactTransaction(); break; }
+        case '4': { money_manager.deleteTransaction(); break; }
+        case '5': { money_manager.showTransactions(); break; }
+        case '6': { money_manager.transferBalance(); break; }
+        case '7': { money_manager.search(); break; }
+        case '8': { money_manager.filter(); break; }
+        case '9': { money_manager.showStatistics(); break; }
+        case '0': { money_manager.setupSettings(); break; }
+        }
+
+        cout << B << "\nНажмите Esc, чтобы вернуться в меню...";
+        while (_getch() != 27);
+    }
+}
+
+int main() {
+    SetConsoleCP(1251);
+    SetConsoleOutputCP(1251);
+    setlocale(LC_ALL, "RU");
+    SetConsoleTitle(L"Учёт домашних финансов");
+    CenterConsole(875, 400);
+    MoneyManager money_manager;
+    showWelcomeScreen();
+    Menu(money_manager);
+    return 0;
+}
