@@ -1,0 +1,15 @@
+import java.util.Scanner;
+public class laba2 {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Введите натуральное число: ");
+        int N = scanner.nextInt();
+        
+        int k, solut = 1;
+        for(k = 0; solut < N; k++){
+            solut *= 2;
+        }
+
+        System.out.print("2^k >= N, при k = " + k);
+    }
+}
