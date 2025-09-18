@@ -1,0 +1,50 @@
+// Найдите наибольший элемент матрицы и заменить все нечетные элементы на него
+public class laba4 {
+    public static void main(String[] args) {
+        //int[][] matrix = {{1, 2, 3},{4, 5, 6},{7, 8, 9}};
+        int[][] matrix = {{-1, -2, -3},{-4, -5, -6},{-7, -8, -9}};
+        //int[][] matrix = {{-5, -3},{-1, 8}};
+
+        System.out.println("Исходная матрица:");
+        printMatrix(matrix);
+
+        int max = maxMatrix(matrix);
+        System.out.println("Max: " + max);
+
+        changeInMatrix(matrix, max);
+
+        System.out.println("Матрица после замены:");
+        printMatrix(matrix);
+    }
+
+    public static int maxMatrix(int[][] matrix) {
+        int max = matrix[0][0];
+        for (int[] elements : matrix) {
+            for (int i = 0; i < elements.length; i++) {
+                if (elements[i] > max) {
+                    max = elements[i];
+                }
+            }
+        }
+        return max;
+    }
+
+    public static void changeInMatrix(int[][] matrix, int max) {
+        for (int[] elements : matrix) {
+            for (int i = 0; i < elements.length; i++) {
+                if (elements[i] % 2 != 0) {
+                    elements[i] = max;
+                }
+            }
+        }
+    }
+
+    public static void printMatrix(int[][] matrix) {
+        for (int[] elements : matrix) {
+            for (int i = 0; i < elements.length; i++) {
+                System.out.print(elements[i] + "  ");
+            }
+            System.out.println();
+        }
+    }
+}
