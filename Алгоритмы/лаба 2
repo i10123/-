@@ -1,0 +1,269 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <queue>
+#include <stack>
+#include <limits>
+#include <string>
+#include <sstream>
+
+using namespace std;
+
+static int input_check(string message, int min, int max) {
+    int input;
+    while (true) {
+        cout << message;
+        cin >> input;
+        if (cin.fail() || input < min || input > max) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Ошибка ввода! Введите число от " << min << " до " << max << "." << endl;
+        }
+        else {
+            return input;
+        }
+    }
+}
+
+static void input_matrix_smegnosti(vector<vector<int>>& matrix, int& n) {
+    n = input_check("Введите количество вершин графа (от 1 до 10): ", 1, 10);
+    matrix.resize(n, vector<int>(n));
+    cout << "\nВведите матрицу смежности размером " << n << "х" << n << ":\n";
+    cout << "Ввод через пробел (только 0 или 1). Диагональ должна быть 0. Матрица должна быть симметричной.\n";
+
+    for (int i = 0; i < n; i++) {
+        while (true) {
+            cout << "Строка " << i + 1 << ": ";
+            bool valid = true;
+            for (int j = 0; j < n; j++) {
+                cin >> matrix[i][j];
+                if (cin.fail() || (matrix[i][j] != 0 && matrix[i][j] != 1)) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (!valid || matrix[i][i] != 0) {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Ошибка! Повторите ввод строки.\n";
+                continue;
+            }
+            break;
+        }
+    }
+
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            if (matrix[i][j] != matrix[j][i]) {
+                cout << "Матрица не симметрична! Повторите ввод.\n";
+                input_matrix_smegnosti(matrix, n);
+                return;
+            }
+}
+
+static void save_matrix_smegnosti(const vector<vector<int>>& matrix) {
+    ofstream fout("matrix_smegnosti.txt");
+    for (const auto& row : matrix) {
+        for (int val : row)
+            fout << val << " ";
+        fout << "\n";
+    }
+    fout.close();
+}
+
+static void save_graf_info(const vector<vector<int>>& matrix) {
+    int n = matrix.size();
+    int edge_count = 0;
+    for (int i = 0; i < n; i++)
+        for (int j = i + 1; j < n; j++)
+            if (matrix[i][j] == 1)
+                ++edge_count;
+
+    ofstream fout("graf.txt");
+    fout << "Количество вершин: " << n << "\n";
+    fout << "Количество ребер: " << edge_count << "\n";
+    fout.close();
+}
+
+static void build_matrix_incidence(const vector<vector<int>>& adj) {
+    int n = adj.size();
+    vector<pair<int, int>> edges;
+    for (int i = 0; i < n; i++)
+        for (int j = i + 1; j < n; j++)
+            if (adj[i][j] == 1)
+                edges.push_back({ i, j });
+
+    vector<vector<int>> inc(n, vector<int>(edges.size(), 0));
+    for (int e = 0; e < edges.size(); e++) {
+        inc[edges[e].first][e] = 1;
+        inc[edges[e].second][e] = 1;
+    }
+
+    ofstream fout("matrix_incidence.txt");
+    for (const auto& row : inc) {
+        for (int val : row)
+            fout << val << " ";
+        fout << "\n";
+    }
+    fout.close();
+}
+
+static void build_list_incidence_reber(const vector<vector<int>>& adj) {
+    int n = adj.size();
+    vector<pair<int, int>> edges;
+    for (int i = 0; i < n; i++)
+        for (int j = i + 1; j < n; j++)
+            if (adj[i][j] == 1)
+                edges.push_back({ i, j });
+
+    ofstream fout("list_incidence_reber.txt");
+    for (int v = 0; v < n; v++) {
+        fout << "Вершина " << v + 1 << ": ";
+        for (int e = 0; e < edges.size(); e++)
+            if (edges[e].first == v || edges[e].second == v)
+                fout << "(" << edges[e].first + 1 << "-" << edges[e].second + 1 << ") ";
+        fout << "\n";
+    }
+    fout.close();
+}
+
+static void build_list_smegnih_vershin(const vector<vector<int>>& adj) {
+    int n = adj.size();
+    ofstream fout("list_smegnih_vershin.txt");
+    for (int i = 0; i < n; i++) {
+        fout << "Вершина " << i + 1 << ": ";
+        for (int j = 0; j < n; j++)
+            if (adj[i][j] == 1)
+                fout << j + 1 << " ";
+        fout << "\n";
+    }
+    fout.close();
+}
+
+static void BFS(const vector<vector<int>>& adj, int start) {
+    int n = adj.size();
+    vector<bool> visited(n, false);
+    queue<int> q;
+    q.push(start);
+    visited[start] = true;
+
+    cout << "\nОбход в ширину (BFS) : ";
+    while (!q.empty()) {
+        int v = q.front(); q.pop();
+        cout << v + 1 << " ";
+        for (int i = 0; i < n; i++)
+            if (adj[v][i] == 1 && !visited[i]) {
+                visited[i] = true;
+                q.push(i);
+            }
+    }
+    cout << "\n";
+}
+
+static void DFS(const vector<vector<int>>& adj, int start) {
+    int n = adj.size();
+    vector<bool> visited(n, false);
+    stack<int> s;
+    s.push(start);
+
+    cout << "Обход в глубину (DFS): ";
+    while (!s.empty()) {
+        int v = s.top(); s.pop();
+        if (!visited[v]) {
+            visited[v] = true;
+            cout << v + 1 << " ";
+            for (int i = n - 1; i >= 0; i--)
+                if (adj[v][i] == 1 && !visited[i])
+                    s.push(i);
+        }
+    }
+    cout << "\n";
+}
+
+static bool load_matrix_smegnosti(vector<vector<int>>& matrix) {
+    ifstream fin("matrix_smegnosti.txt");
+    if (!fin.is_open()) {
+        cout << "Файл matrix_smegnosti.txt не найден.\n";
+        return false;
+    }
+
+    matrix.clear();
+    string line;
+    while (getline(fin, line)) {
+        vector<int> row;
+        int val;
+        istringstream iss(line);
+        while (iss >> val)
+            row.push_back(val);
+        matrix.push_back(row);
+    }
+    fin.close();
+    return true;
+}
+int main() {
+    setlocale(LC_ALL, "RU");
+
+    while (true) {
+        cout << "\nВыберите действие:\n";
+        cout << "1. Ввод и преобразование графа\n";
+        cout << "2. Обход графа из файла (BFS и DFS)\n";
+        cout << "0. Выход\n";
+
+        int choice = input_check("Ваш выбор: ", 0, 2);
+
+        switch (choice) {
+        case 0:
+            cout << "Завершение программы.\n";
+            return 0;
+
+        case 1: {
+            vector<vector<int>> adjacency_matrix;
+            int n;
+            input_matrix_smegnosti(adjacency_matrix, n);
+            save_matrix_smegnosti(adjacency_matrix);
+            save_graf_info(adjacency_matrix);
+            build_matrix_incidence(adjacency_matrix);
+            build_list_incidence_reber(adjacency_matrix);
+            build_list_smegnih_vershin(adjacency_matrix);
+            cout << "Граф сохранён и преобразования завершены.\n";
+            break;
+        }
+
+        case 2: {
+            vector<vector<int>> adjacency_matrix;
+            if (!load_matrix_smegnosti(adjacency_matrix)) {
+                cout << "Невозможно выполнить обход: файл matrix_smegnosti.txt не найден или повреждён.\n";
+                break;
+            }
+            int n = adjacency_matrix.size();
+            int start = input_check("\nВведите номер стартовой вершины для обхода (от 1 до " + to_string(n) + "): ", 1, n);
+            BFS(adjacency_matrix, start - 1);
+            DFS(adjacency_matrix, start - 1);
+            break;
+        }
+
+        default:
+            cout << "Неизвестная команда. Повторите ввод.\n";
+            break;
+        }
+    }
+}
+
+/* Пример матрицы 5х5
+0 1 1 0 0
+1 0 0 1 0
+1 0 0 0 1
+0 1 0 0 0
+0 0 1 0 0
+*/
+
+/* Пример матрицы 7х7
+0 1 1 0 0 0 0
+1 0 0 1 1 0 0
+1 0 0 0 0 1 0
+0 1 0 0 0 0 0
+0 1 0 0 0 0 1
+0 0 1 0 0 0 0
+0 0 0 0 1 0 0
+
+*/
