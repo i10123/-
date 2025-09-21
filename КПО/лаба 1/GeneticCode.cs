@@ -170,7 +170,7 @@ namespace КПО_лаба_1
                 }
             }
 
-            writer.WriteLine(most + "\t" + max);
+            writer.WriteLine(most + "\t\t" + max);
         }
         public string Decoding(string input_acid)
         {
