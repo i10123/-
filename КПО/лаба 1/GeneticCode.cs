@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace КПО_лаба_1
 {
@@ -11,191 +10,190 @@ namespace КПО_лаба_1
         public string organism;
         public string amino_acids;
     }
-
-    public class GeneticCode
-    {
-        private List<GeneticData> data = new List<GeneticData>();
-        private int operationCount = 1;
-        private string author;
-
-        public GeneticCode(string authorName)
-        {
-            author = authorName;
-        }
-
-        public void LoadSequences(string filename)
-        {
-            foreach (var line in File.ReadAllLines(filename))
-            {
-                var parts = line.Split('\t');
-                if (parts.Length == 3)
-                {
-                    GeneticData entry;
-                    entry.protein = parts[0];
-                    entry.organism = parts[1];
-                    entry.amino_acids = Decode(parts[2]);
-                    data.Add(entry);
-                }
+    public class GeneticCode{
+        public List<GeneticData> data = new List<GeneticData>(); // Список всех белков из файла
+        public int operationCount = 1;
+        public void LoadSequences(string filename){
+            string[] lines = File.ReadAllLines(filename); // Читаем все строки из файла
+            for (int i = 0; i < lines.Length; i++){
+                string[] parts = lines[i].Split('\t'); // Разделяем строку: [белок, организм, аминокислоты]
+                GeneticData entry; // Создаём переменную для хранения одной записи
+                entry.protein = parts[0]; // белок
+                entry.organism = parts[1]; // организм
+                entry.amino_acids = Decompress(parts[2]); // Раскодировка аминокислоты
+                data.Add(entry); // Добавляем запись в список
             }
         }
 
-        public void ProcessCommands(string commandFile, string outputFile)
-        {
-            using (var writer = new StreamWriter(outputFile))
-            {
-                writer.WriteLine(author);
+        // Метод для обработки команд и записи результата
+        public void Processing_Commands_and_Writing_Result(string commandFile, string outputFile){
+            using (StreamWriter writer = new StreamWriter(outputFile)){ // Открываем файл для записи
+                writer.WriteLine("Каракулько Денис"); 
                 writer.WriteLine("Генетический поиск");
 
-                foreach (var line in File.ReadAllLines(commandFile))
-                {
-                    string[] parts = line.Split('\t');
-                    string opNum = operationCount.ToString("D3");
-                    string header = $"{opNum}\t{parts[0]}";
+                string[] commands = File.ReadAllLines(commandFile); // Читаем все команды
+                for (int i = 0; i < commands.Length; i++){
+                    string[] parts = commands[i].Split('\t');
+                    string operationNum = operationCount.ToString("D3");
+                    string header = operationNum + "\t" + parts[0]; // Начало заголовка: номер и тип операции
+                    if (parts.Length > 1) 
+                        header += "\t" + parts[1]; // Добавляем параметр 1
+                    if (parts.Length > 2) 
+                        header += "\t" + parts[2]; // Добавляем параметр 2, если есть
 
-                    if (parts[0] == "search" && parts.Length >= 2)
-                        header += $"\t{parts[1]}";
-                    else if (parts[0] == "diff" && parts.Length >= 3)
-                        header += $"\t{parts[1]}\t{parts[2]}";
-                    else if (parts[0] == "mode" && parts.Length >= 2)
-                        header += $"\t{parts[1]}";
-
-                    writer.WriteLine(new string('-', 74));
+                    writer.WriteLine("--------------------------------------------------------------------------"); // Разделитель
                     writer.WriteLine(header);
 
-                    switch (parts[0])
+                    if (parts[0] == "search" && parts.Length >= 2)
                     {
-                        case "search":
-                            if (parts.Length >= 2) Search(parts[1], writer);
-                            break;
-                        case "diff":
-                            if (parts.Length >= 3) Diff(parts[1], parts[2], writer);
-                            break;
-                        case "mode":
-                            if (parts.Length >= 2) Mode(parts[1], writer);
-                            break;
+                        Search(parts[1], writer); // Поиск последовательности
+                    }
+                    else if (parts[0] == "diff" && parts.Length >= 3)
+                    {
+                        Diff(parts[1], parts[2], writer); // Сравнение двух белков
+                    }
+                    else if (parts[0] == "mode" && parts.Length >= 2)
+                    {
+                        Mode(parts[1], writer); // Частотный анализ аминокислот
                     }
 
-                    operationCount++;
+                    operationCount++; // Увеличиваем номер операции
                 }
             }
         }
 
-        private void Search(string query, StreamWriter writer)
+        // Метод поиска аминокислотной последовательности
+        public void Search(string str, StreamWriter writer)
         {
-            string decoded = Decode(query);
-            bool found = false;
+            string decompressed = Decompress(str); // Раскодируем строку, если она сжата
+            bool found = false; // Флаг — нашли ли совпадение
 
-            writer.WriteLine("organism\t\t\tprotein");
+            writer.WriteLine("organism\t\t\tprotein"); // Заголовок таблицы
 
-            foreach (var item in data)
+            for (int i = 0; i < data.Count; i++) // Проходим по всем белкам
             {
-                if (item.amino_acids.Contains(decoded))
+                if (data[i].amino_acids.Contains(decompressed)) // Если цепочка содержит искомую последовательность
                 {
-                    writer.WriteLine($"{item.organism,-24}\t{item.protein}");
+                    writer.WriteLine(data[i].organism + "\t\t\t" + data[i].protein); // Пишем организм и белок
+                    found = true; // Отмечаем, что нашли
+                }
+            }
+
+            if (!found) // Если ничего не нашли
+            {
+                writer.WriteLine("NOT FOUND"); // Пишем сообщение
+            }
+        }
+
+        // Метод сравнения двух белков
+        public void Diff(string prot1, string prot2, StreamWriter writer)
+        {
+            GeneticData p1 = new GeneticData(); // Первый белок
+            GeneticData p2 = new GeneticData(); // Второй белок
+            bool found1 = false; // Найден ли первый
+            bool found2 = false; // Найден ли второй
+
+            for (int i = 0; i < data.Count; i++) // Ищем оба белка по имени
+            {
+                if (data[i].protein == prot1)
+                {
+                    p1 = data[i];
+                    found1 = true;
+                }
+                if (data[i].protein == prot2)
+                {
+                    p2 = data[i];
+                    found2 = true;
+                }
+            }
+
+            writer.WriteLine("amino-acids difference:"); // Заголовок
+
+            if (!found1 || !found2) // Если хотя бы один не найден
+            {
+                string missing = "";
+                if (!found1) missing += prot1 + " "; // Добавляем имя отсутствующего
+                if (!found2) missing += prot2;
+                writer.WriteLine("MISSING:\t" + missing); // Пишем сообщение
+                return; // Выходим из метода
+            }
+
+            int diff = 0; // Счётчик различий
+            int len = Math.Min(p1.amino_acids.Length, p2.amino_acids.Length); // Берём минимальную длину
+
+            for (int i = 0; i < len; i++) // Сравниваем символы по одному
+            {
+                if (p1.amino_acids[i] != p2.amino_acids[i])
+                {
+                    diff++; // Если разные — увеличиваем счётчик
+                }
+            }
+
+            diff += Math.Abs(p1.amino_acids.Length - p2.amino_acids.Length); // Добавляем разницу в длине
+            writer.WriteLine(diff.ToString()); // Пишем результат
+        }
+
+        // Метод поиска самой частой аминокислоты
+        public void Mode(string proteinName, StreamWriter writer)
+        {
+            GeneticData p = new GeneticData(); // Переменная для найденного белка
+            bool found = false; // Флаг — найден ли белок
+
+            for (int i = 0; i < data.Count; i++) // Ищем белок по имени
+            {
+                if (data[i].protein == proteinName)
+                {
+                    p = data[i];
                     found = true;
                 }
             }
 
-            if (!found)
-                writer.WriteLine("NOT FOUND");
-        }
+            writer.WriteLine("amino-acid occurs:"); // Заголовок
 
-        private void Diff(string prot1, string prot2, StreamWriter writer)
-        {
-            var p1 = data.Find(p => p.protein == prot1);
-            var p2 = data.Find(p => p.protein == prot2);
-
-            writer.WriteLine("amino-acids difference:");
-
-            if (string.IsNullOrEmpty(p1.protein) || string.IsNullOrEmpty(p2.protein))
+            if (!found) // Если белок не найден
             {
-                List<string> missing = new List<string>();
-                if (string.IsNullOrEmpty(p1.protein)) missing.Add(prot1);
-                if (string.IsNullOrEmpty(p2.protein)) missing.Add(prot2);
-                writer.WriteLine("MISSING:\t" + string.Join(", ", missing));
+                writer.WriteLine("MISSING:\t" + proteinName); // Пишем сообщение
                 return;
             }
 
-            int diff = 0;
-            int len = Math.Min(p1.amino_acids.Length, p2.amino_acids.Length);
-            for (int i = 0; i < len; i++)
-                if (p1.amino_acids[i] != p2.amino_acids[i]) diff++;
+            int[] freq = new int[256]; // Массив частот по ASCII (всего 256 символов)
 
-            diff += Math.Abs(p1.amino_acids.Length - p2.amino_acids.Length);
-            writer.WriteLine(diff.ToString());
-        }
-
-        private void Mode(string proteinName, StreamWriter writer)
-        {
-            var p = data.Find(d => d.protein == proteinName);
-            writer.WriteLine("amino-acid occurs:");
-
-            if (string.IsNullOrEmpty(p.protein))
+            for (int i = 0; i < p.amino_acids.Length; i++) // Проходим по цепочке
             {
-                writer.WriteLine("MISSING:\t" + proteinName);
-                return;
+                char c = p.amino_acids[i]; // Берём символ
+                freq[c]++; // Увеличиваем его счётчик
             }
 
-            Dictionary<char, int> freq = new Dictionary<char, int>();
-            foreach (char c in p.amino_acids)
-            {
-                if (!freq.ContainsKey(c)) freq[c] = 0;
-                freq[c]++;
-            }
+            int max = 0; // Максимальная частота
+            char most = ' '; // Самый частый символ
 
-            int max = 0;
-            char most = ' ';
-            foreach (var kv in freq)
+            for (int i = 0; i < freq.Length; i++) // Проходим по всем возможным символам
             {
-                if (kv.Value > max || (kv.Value == max && kv.Key < most))
+                if (freq[i] > max || (freq[i] == max && i < most)) // Если частота больше или равна, но символ раньше по алфавиту
                 {
-                    max = kv.Value;
-                    most = kv.Key;
+                    max = freq[i];
+                    most = (char)i;
                 }
             }
 
-            writer.WriteLine($"{most}\t\t{max}");
+            writer.WriteLine(most + "\t\t" + max); // Пишем результат
         }
 
-        public static string Decode(string input)
-        {
-            StringBuilder decoded = new StringBuilder();
-            for (int i = 0; i < input.Length; i++)
-            {
-                if (char.IsDigit(input[i]) && i + 1 < input.Length)
-                {
-                    int count = input[i] - '0';
-                    char ch = input[i + 1];
-                    decoded.Append(new string(ch, count));
+        public string Decompress(string input_acid){
+            string full_amino_acid = "";
+            for (int i = 0; i < input_acid.Length; i++){
+                if (char.IsDigit(input_acid[i]) && i + 1 < input_acid.Length){
+                    int num = input_acid[i] - '0'; // преобразование ('3' -> 3)
+                    char letter = input_acid[i + 1]; // следующий символ — аминокислота
+                    for (int j = 0; j < num; j++){ // записываем символ num раз
+                        full_amino_acid += letter;
+                    }
                     i++;
                 }
                 else
-                {
-                    decoded.Append(input[i]);
-                }
+                    full_amino_acid += input_acid[i];
             }
-            return decoded.ToString();
-        }
-
-        public static string Encode(string input)
-        {
-            StringBuilder encoded = new StringBuilder();
-            int count = 1;
-
-            for (int i = 1; i < input.Length; i++)
-            {
-                if (input[i] == input[i - 1] && count < 9)
-                    count++;
-                else
-                {
-                    encoded.Append(count > 2 ? count.ToString() + input[i - 1] : new string(input[i - 1], count));
-                    count = 1;
-                }
-            }
-
-            char lastChar = input[input.Length - 1];
-            encoded.Append(count > 2 ? count.ToString() + lastChar : new string(lastChar, count));
-            return encoded.ToString();
+            return full_amino_acid;
         }
     }
 }
