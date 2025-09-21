@@ -1,1 +1,46 @@
+from PIL import Image
+import numpy as np
 
+# Загрузка изображения и преобразование в оттенки серого
+def load_image(path):
+    image = Image.open(path).convert("L")  # "L" — grayscale
+    return np.array(image)
+
+# Сохранение массива как изображения
+def save_image(array, path):
+    Image.fromarray(array).save(path)
+
+# Фильтр нижних частот (усреднение)
+def low_pass_filter(image_array, kernel_size=3):
+    pad = kernel_size // 2
+    padded = np.pad(image_array, pad, mode='edge')  # экстраполяция краёв
+    output = np.zeros_like(image_array)
+
+    for i in range(image_array.shape[0]):
+        for j in range(image_array.shape[1]):
+            region = padded[i:i+kernel_size, j:j+kernel_size]
+            output[i, j] = np.mean(region)
+
+    return output.astype(np.uint8)
+
+# Фильтр верхних частот (вычитание и модуль)
+def high_pass_filter(original, low_passed):
+    return np.abs(original - low_passed).astype(np.uint8)
+
+# Основной блок
+def main():
+    input_path = "5.png"  # замените на путь к вашему изображению
+    low_output_path = "low_pass.png"
+    high_output_path = "high_pass.png"
+    kernel_size = 5  # нечётное число > 3
+
+    original = load_image(input_path)
+    low = low_pass_filter(original, kernel_size)
+    high = high_pass_filter(original, low)
+
+    save_image(low, low_output_path)
+    save_image(high, high_output_path)
+    print("Фильтрация завершена. Результаты сохранены.")
+
+if __name__ == "__main__":
+    main()
