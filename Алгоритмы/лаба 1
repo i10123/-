@@ -6,6 +6,7 @@
 #include <limits>
 #include <string>
 #include <sstream>
+#include <iomanip>
 
 using namespace std;
 
@@ -24,7 +25,7 @@ static int input_check(string message, int min, int max) {
         }
     }
 }
-
+// ввод матрицы смежности
 static void input_matrix_smegnosti(vector<vector<int>>& matrix, int& n) {
     n = input_check("Введите количество вершин графа (от 1 до 10): ", 1, 10);
     matrix.resize(n, vector<int>(n));
@@ -60,7 +61,6 @@ static void input_matrix_smegnosti(vector<vector<int>>& matrix, int& n) {
                 return;
             }
 }
-
 static void save_matrix_smegnosti(const vector<vector<int>>& matrix) {
     ofstream fout("matrix_smegnosti.txt");
     for (const auto& row : matrix) {
@@ -70,53 +70,54 @@ static void save_matrix_smegnosti(const vector<vector<int>>& matrix) {
     }
     fout.close();
 }
-
-static void save_graf_info(const vector<vector<int>>& matrix) {
-    int n = matrix.size();
-    int edge_count = 0;
-    for (int i = 0; i < n; i++)
-        for (int j = i + 1; j < n; j++)
-            if (matrix[i][j] == 1)
-                ++edge_count;
-
-    ofstream fout("graf.txt");
-    fout << "Количество вершин: " << n << "\n";
-    fout << "Количество ребер: " << edge_count << "\n";
-    fout.close();
-}
-
+// матрица инцидентности
 static void build_matrix_incidence(const vector<vector<int>>& adj) {
     int n = adj.size();
     vector<pair<int, int>> edges;
+
+    // Собираем список рёбер
     for (int i = 0; i < n; i++)
         for (int j = i + 1; j < n; j++)
             if (adj[i][j] == 1)
-                edges.push_back({ i, j });
+                edges.push_back({ i + 1, j + 1 });
 
     vector<vector<int>> inc(n, vector<int>(edges.size(), 0));
+
+    // Заполняем матрицу инцидентности
     for (int e = 0; e < edges.size(); e++) {
-        inc[edges[e].first][e] = 1;
-        inc[edges[e].second][e] = 1;
+        inc[edges[e].first - 1][e] = 1;
+        inc[edges[e].second - 1][e] = 1;
     }
 
     ofstream fout("matrix_incidence.txt");
-    for (const auto& row : inc) {
-        for (int val : row)
-            fout << val << " ";
+
+    fout << "   ";
+    for (const auto& edge : edges)
+        fout << setw(6) << "(" + to_string(edge.first) + "," + to_string(edge.second) + ")";
+    fout << "\n";
+
+    for (int v = 0; v < n; v++) {
+        fout << v + 1 << " |";
+        for (int e = 0; e < edges.size(); e++) {
+            fout << setw(5) << inc[v][e];
+        }
         fout << "\n";
     }
+
     fout.close();
 }
-
+// список инцидентных ребер
 static void build_list_incidence_reber(const vector<vector<int>>& adj) {
     int n = adj.size();
     vector<pair<int, int>> edges;
+    // список рёбер
     for (int i = 0; i < n; i++)
         for (int j = i + 1; j < n; j++)
             if (adj[i][j] == 1)
                 edges.push_back({ i, j });
 
     ofstream fout("list_incidence_reber.txt");
+    // для каждой вершины выводим список её рёбер
     for (int v = 0; v < n; v++) {
         fout << "Вершина " << v + 1 << ": ";
         for (int e = 0; e < edges.size(); e++)
@@ -126,7 +127,7 @@ static void build_list_incidence_reber(const vector<vector<int>>& adj) {
     }
     fout.close();
 }
-
+// список смежных вершин
 static void build_list_smegnih_vershin(const vector<vector<int>>& adj) {
     int n = adj.size();
     ofstream fout("list_smegnih_vershin.txt");
@@ -139,47 +140,92 @@ static void build_list_smegnih_vershin(const vector<vector<int>>& adj) {
     }
     fout.close();
 }
-
-static void BFS(const vector<vector<int>>& adj, int start) {
-    int n = adj.size();
-    vector<bool> visited(n, false);
-    queue<int> q;
-    q.push(start);
-    visited[start] = true;
-
-    cout << "\nОбход в ширину (BFS) : ";
-    while (!q.empty()) {
-        int v = q.front(); q.pop();
-        cout << v + 1 << " ";
-        for (int i = 0; i < n; i++)
-            if (adj[v][i] == 1 && !visited[i]) {
-                visited[i] = true;
-                q.push(i);
-            }
-    }
-    cout << "\n";
-}
-
 static void DFS(const vector<vector<int>>& adj, int start) {
     int n = adj.size();
+    vector<int> label(n, 0);       // метки вершин
+    vector<bool> inStack(n, false);
     vector<bool> visited(n, false);
+    vector<string> edgeTypes;
     stack<int> s;
-    s.push(start);
+    int k = 1;
 
-    cout << "Обход в глубину (DFS): ";
+    label[start] = k++;
+    s.push(start);
+    inStack[start] = true;
+
+    cout << "\nDFS (обход в глубину):";
+
     while (!s.empty()) {
-        int v = s.top(); s.pop();
-        if (!visited[v]) {
+        int v = s.top();
+        bool found = false;
+
+        for (int w = 0; w < n; w++) {
+            if (adj[v][w] == 1) {
+                if (label[w] == 0) {
+                    // Новая вершина — древесное ребро
+                    label[w] = k++;
+                    edgeTypes.push_back("(" + to_string(v + 1) + "-" + to_string(w + 1) + ") — древесное");
+                    s.push(w);
+                    inStack[w] = true;
+                    found = true;
+                    break;
+                }
+                else if (!visited[w]) {
+                    // Уже помеченная вершина — обратное ребро
+                    edgeTypes.push_back("(" + to_string(v + 1) + "-" + to_string(w + 1) + ") — обратное");
+                }
+            }
+        }
+
+        if (!found) {
+            s.pop();
+            inStack[v] = false;
             visited[v] = true;
-            cout << v + 1 << " ";
-            for (int i = n - 1; i >= 0; i--)
-                if (adj[v][i] == 1 && !visited[i])
-                    s.push(i);
         }
     }
-    cout << "\n";
-}
 
+    cout << "\nМетки вершин:\n";
+    for (int i = 0; i < n; i++)
+        cout << "Вершина " << i + 1 << ": метка " << label[i] << "\n";
+
+    cout << "\nКлассификация рёбер:\n";
+    for (const auto& edge : edgeTypes)
+        cout << edge << "\n";
+}
+static void BFS(const vector<vector<int>>& adj, int start) {
+    int n = adj.size();
+    vector<int> key(n, -1);       // уровень вершины
+    vector<int> parent(n, -1);    // родитель в дереве
+    vector<bool> visited(n, false);
+    queue<int> q;
+
+    key[start] = 0;
+    visited[start] = true;
+    q.push(start);
+
+    cout << "\nBFS (обход в ширину):\n";
+
+    while (!q.empty()) {
+        int v = q.front(); q.pop();
+        cout << "Вершина " << v + 1 << " (уровень " << key[v] << ")\n";
+
+        for (int w = 0; w < n; w++) {
+            if (adj[v][w] == 1 && !visited[w]) {
+                key[w] = key[v] + 1;
+                parent[w] = v;
+                visited[w] = true;
+                q.push(w);
+            }
+        }
+    }
+
+    cout << "\nДерево поиска:\n";
+    for (int i = 0; i < n; i++) {
+        if (parent[i] != -1)
+            cout << "Вершина " << i + 1 << " <- " << parent[i] + 1 << "\n";
+    }
+}
+// загрузка матрицы
 static bool load_matrix_smegnosti(vector<vector<int>>& matrix) {
     ifstream fin("matrix_smegnosti.txt");
     if (!fin.is_open()) {
@@ -217,28 +263,27 @@ int main() {
             return 0;
 
         case 1: {
-            vector<vector<int>> adjacency_matrix;
+            vector<vector<int>> matrix;
             int n;
-            input_matrix_smegnosti(adjacency_matrix, n);
-            save_matrix_smegnosti(adjacency_matrix);
-            save_graf_info(adjacency_matrix);
-            build_matrix_incidence(adjacency_matrix);
-            build_list_incidence_reber(adjacency_matrix);
-            build_list_smegnih_vershin(adjacency_matrix);
+            input_matrix_smegnosti(matrix, n);
+            save_matrix_smegnosti(matrix);
+            build_matrix_incidence(matrix);
+            build_list_incidence_reber(matrix);
+            build_list_smegnih_vershin(matrix);
             cout << "Граф сохранён и преобразования завершены.\n";
             break;
         }
 
         case 2: {
-            vector<vector<int>> adjacency_matrix;
-            if (!load_matrix_smegnosti(adjacency_matrix)) {
+            vector<vector<int>> matrix;
+            if (!load_matrix_smegnosti(matrix)) {
                 cout << "Невозможно выполнить обход: файл matrix_smegnosti.txt не найден или повреждён.\n";
                 break;
             }
-            int n = adjacency_matrix.size();
+            int n = matrix.size();
             int start = input_check("\nВведите номер стартовой вершины для обхода (от 1 до " + to_string(n) + "): ", 1, n);
-            BFS(adjacency_matrix, start - 1);
-            DFS(adjacency_matrix, start - 1);
+            BFS(matrix, start - 1);
+            DFS(matrix, start - 1);
             break;
         }
 
@@ -256,7 +301,6 @@ int main() {
 0 1 0 0 0
 0 0 1 0 0
 */
-
 /* Пример матрицы 7х7
 0 1 1 0 0 0 0
 1 0 0 1 1 0 0
