@@ -1,46 +1,21 @@
-from PIL import Image
+import cv2
 import numpy as np
 
-# Загрузка изображения и преобразование в оттенки серого
-def load_image(path):
-    image = Image.open(path).convert("L")  # "L" — grayscale
-    return np.array(image)
+# Загружаем изображение
+image = cv2.imread("5.png", cv2.IMREAD_GRAYSCALE)
 
-# Сохранение массива как изображения
-def save_image(array, path):
-    Image.fromarray(array).save(path)
+# Построение ядра фильтра нижних частот
+kernel_size = 5  # Размер ядра
+# Создание усредняющего ядра
+def create_low_pass_kernel(size):
+    return np.ones((size, size), np.float32) / (size * size)
+kernel = create_low_pass_kernel(kernel_size)
 
-# Фильтр нижних частот (усреднение)
-def low_pass_filter(image_array, kernel_size=3):
-    pad = kernel_size // 2
-    padded = np.pad(image_array, pad, mode='edge')  # экстраполяция краёв
-    output = np.zeros_like(image_array)
+# Применяем ФНЧ (Используем экстраполяцию: копирование краевых пикселей)
+low_pass_filter = cv2.filter2D(image, -1, kernel, borderType=cv2.BORDER_REPLICATE)
 
-    for i in range(image_array.shape[0]):
-        for j in range(image_array.shape[1]):
-            region = padded[i:i+kernel_size, j:j+kernel_size]
-            output[i, j] = np.mean(region)
+# ФВЧ (Вычисляем абсолютную разность между оригиналом и сглаженным изображением)
+high_pass_filter = cv2.absdiff(image, low_pass_filter)
 
-    return output.astype(np.uint8)
-
-# Фильтр верхних частот (вычитание и модуль)
-def high_pass_filter(original, low_passed):
-    return np.abs(original - low_passed).astype(np.uint8)
-
-# Основной блок
-def main():
-    input_path = "5.png"  # замените на путь к вашему изображению
-    low_output_path = "low_pass.png"
-    high_output_path = "high_pass.png"
-    kernel_size = 5  # нечётное число > 3
-
-    original = load_image(input_path)
-    low = low_pass_filter(original, kernel_size)
-    high = high_pass_filter(original, low)
-
-    save_image(low, low_output_path)
-    save_image(high, high_output_path)
-    print("Фильтрация завершена. Результаты сохранены.")
-
-if __name__ == "__main__":
-    main()
+cv2.imwrite("LOW.png", low_pass_filter)
+cv2.imwrite("HIGH.png", high_pass_filter)
