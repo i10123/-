@@ -1,1 +1,54 @@
+public class Time {
+    private int hours;
+    private int minutes;
 
+    public Time() {
+        this.hours = 0;
+        this.minutes = 0;
+    }
+
+    public Time(int hours, int minutes) {
+        if (hours < 0 || minutes < 0 || minutes >= 60) {
+            throw new IllegalArgumentException("Некорректные значения времени!");
+        }
+        this.hours = hours;
+        this.minutes = minutes;
+    }
+
+    public void setHours(int hours) {
+        if (hours < 0) throw new IllegalArgumentException("Часы не могут быть отрицательными");
+        this.hours = hours;
+    }
+
+    public void setMinutes(int minutes) {
+        if (minutes < 0 || minutes > 59) throw new IllegalArgumentException("Минуты должны быть от 0 до 59");
+        this.minutes = minutes;
+    }
+
+    public int getHours() {
+        return hours;
+    }
+
+    public int getMinutes() {
+        return minutes;
+    }
+
+    public int totalMinutes() {
+        return hours * 60 + minutes;
+    }
+
+    // equals
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof Time)) return false;
+        Time other = (Time) obj;
+        return this.hours == other.hours && this.minutes == other.minutes;
+    }
+
+    // toString
+    @Override
+    public String toString() {
+        return "Время: " + hours + " ч. " + minutes + " мин.";
+    }
+}
