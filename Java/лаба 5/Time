@@ -3,52 +3,45 @@ public class Time {
     private int minutes;
 
     public Time() {
-        this.hours = 0;
-        this.minutes = 0;
+        hours = 0;
+        minutes = 0;
     }
-
-    public Time(int hours, int minutes) {
-        if (hours < 0 || minutes < 0 || minutes >= 60) {
-            throw new IllegalArgumentException("Некорректные значения времени!");
+    private void setHours(int h) {
+        if (h >= 0) {
+            hours = h;
+        } else {
+            System.out.println("Часы не могут быть отрицательными. Установлено 0.");
+            hours = 0;
         }
-        this.hours = hours;
-        this.minutes = minutes;
     }
-
-    public void setHours(int hours) {
-        if (hours < 0) throw new IllegalArgumentException("Часы не могут быть отрицательными");
-        this.hours = hours;
+    private void setMinutes(int m) {
+        if (m >= 0 && m < 60) {
+            minutes = m;
+        } else {
+            System.out.println("Минуты должны быть от 0 до 59. Установлено 0.");
+            minutes = 0;
+        }
     }
-
-    public void setMinutes(int minutes) {
-        if (minutes < 0 || minutes > 59) throw new IllegalArgumentException("Минуты должны быть от 0 до 59");
-        this.minutes = minutes;
-    }
-
     public int getHours() {
-        return hours;
+        return hours;    
     }
-
     public int getMinutes() {
-        return minutes;
+        return minutes;    
     }
-
+    public Time(int h, int m) {
+        setHours(h);
+        setMinutes(m);
+    }
     public int totalMinutes() {
-        return hours * 60 + minutes;
+        return hours * 60 + minutes;    
     }
 
-    // equals
-    @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (!(obj instanceof Time)) return false;
-        Time other = (Time) obj;
-        return this.hours == other.hours && this.minutes == other.minutes;
+        if (obj instanceof Time other) {
+            return hours == other.hours && minutes == other.minutes;
+        }
+        return false;
     }
-
-    // toString
-    @Override
-    public String toString() {
-        return "Время: " + hours + " ч. " + minutes + " мин.";
-    }
+@Override
+    public String toString() {        return "Время: " + hours + " ч. " + minutes + " мин.";    }
 }
