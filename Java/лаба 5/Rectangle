@@ -2,35 +2,47 @@ public class Rectangle {
     private int x1, y1, x2, y2;
 
     public Rectangle() {
-        this.x1 = 0; this.y1 = 0;
-        this.x2 = 1; this.y2 = 1;
+        x1 = 0; y1 = 0;
+        x2 = 1; y2 = 1;
     }
-
-    public Rectangle(int x1, int y1, int x2, int y2) {
-        if (x1 == x2 || y1 == y2) {
-            throw new IllegalArgumentException("Прямоугольник не может иметь нулевую ширину или высоту");
+    public Rectangle(int a, int b, int c, int d) {
+        if (a == c || b == d) {
+            System.out.println("Ширина и высота не могут быть нулевыми. Установлены значения по умолчанию.");
+            x1 = 0; y1 = 0; x2 = 1; y2 = 1;
+        } else {
+            x1 = a; y1 = b; x2 = c; y2 = d;
         }
-        this.x1 = x1; this.y1 = y1;
-        this.x2 = x2; this.y2 = y2;
+    }
+    public void setX1(int input){ 
+        x1 = input; 
+    }
+    public void setY1(int input){ 
+        y1 = input; 
+    }
+    public void setX2(int input){
+        x2 = input; 
+    }
+    public void setY2(int input){ 
+        y2 = input; 
     }
 
-    // Сеттеры и геттеры
-    public void setX1(int x1) { this.x1 = x1; }
-    public void setY1(int y1) { this.y1 = y1; }
-    public void setX2(int x2) { this.x2 = x2; }
-    public void setY2(int y2) { this.y2 = y2; }
+    public int getX1() { 
+        return x1; 
+    }
+    public int getY1() { 
+        return y1; 
+    }
+    public int getX2() { 
+        return x2; 
+    }
+    public int getY2() { 
+        return y2; 
+    }
 
-    public int getX1() { return x1; }
-    public int getY1() { return y1; }
-    public int getX2() { return x2; }
-    public int getY2() { return y2; }
-
-    // Метод: вычислить площадь
     public int getArea() {
         return Math.abs((x2 - x1) * (y2 - y1));
     }
 
-    // Метод: поворот на 90° по часовой стрелке
     public void rotate90() {
         int centerX = (x1 + x2) / 2;
         int centerY = (y1 + y2) / 2;
@@ -46,18 +58,14 @@ public class Rectangle {
         y2 = centerY + dx2;
     }
 
-    // equals
-    @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (!(obj instanceof Rectangle)) return false;
-        Rectangle other = (Rectangle) obj;
-        return x1 == other.x1 && y1 == other.y1 && x2 == other.x2 && y2 == other.y2;
+        if (obj instanceof Rectangle other) {
+            return x1 == other.x1 && y1 == other.y1 && x2 == other.x2 && y2 == other.y2;
+        }
+        return false;
     }
-
-    // toString
-    @Override
+@Override
     public String toString() {
-        return "Прямоугольник: (" + x1 + "," + y1 + ") до (" + x2 + "," + y2 + ")";
+        return "Прямоугольник: (" + x1 + "," + y1 + ") - (" + x2 + "," + y2 + ")";
     }
 }
