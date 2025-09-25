@@ -1,0 +1,32 @@
+public class Program {
+    public static void main(String[] args) {
+        // 1
+        Time[] times = new Time[4];
+        times[0] = new Time();
+        times[1] = new Time(1, 30);
+        times[2] = new Time(2, 45);
+        times[3] = new Time(1, 30);
+
+        for (Time t : times) {
+            System.out.println(t + " -> Всего минут: " + t.totalMinutes());
+        }
+
+        System.out.println("Равны ли times[1] и times[3]? " + times[1].equals(times[3]));
+
+        // 2
+        Rectangle[] rects = new Rectangle[4];
+        rects[0] = new Rectangle();
+        rects[1] = new Rectangle(0, 0, 4, 3);
+        rects[2] = new Rectangle(1, 1, 5, 4);
+        rects[3] = new Rectangle(0, 0, 4, 3);
+
+        for (Rectangle r : rects) {
+            System.out.println(r + " → Площадь: " + r.getArea());
+        }
+
+        rects[1].rotate90();
+        System.out.println("После поворота: " + rects[1]);
+
+        System.out.println("Равны ли rects[1] и rects[3]? " + rects[1].equals(rects[3]));
+    }
+}
