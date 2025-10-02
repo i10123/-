@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace КПО_лаба_2
 {
@@ -7,27 +7,30 @@ namespace КПО_лаба_2
         public string name;
         public State state = State.NotInGame;
         public int location = -1;
-        public int distanceTraveled = 0;
+        public int traveledDistance = 0;
 
         public Player(string name)
         {
             this.name = name;
         }
 
-        public void Move(int steps, int fieldSize)
+        public void Move(int move, int fieldSize)
         {
             if (state == State.NotInGame)
             {
-                location = steps;
+                location = move;
                 state = State.Playing;
             }
             else
             {
-                int zeroBased = location - 1;
-                zeroBased = (zeroBased + steps) % fieldSize;
-                if (zeroBased < 0) zeroBased += fieldSize;
-                location = zeroBased + 1;
-                distanceTraveled += Math.Abs(steps);
+                int locationIndex = location - 1;
+                locationIndex = (locationIndex + move) % fieldSize;
+
+                if (locationIndex < 0) 
+                    locationIndex += fieldSize;
+
+                location = locationIndex + 1;
+                traveledDistance += Math.Abs(move);
             }
         }
     }
