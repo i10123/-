@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace КПО_лаба_2
@@ -17,23 +17,17 @@ namespace КПО_лаба_2
             mouse = new Player("Mouse");
         }
 
-        public void DoMoveCommand(char command, int steps)
+        public void DoingCommand(char command, int move)
         {
             Player player;
             if (command == 'C')
-            {
                 player = cat;
-            }
             else if (command == 'M')
-            {
                 player = mouse;
-            }
             else
-            {
-                return; // Invalid
-            }
+                return;
 
-            player.Move(steps, size);
+            player.Move(move, size);
         }
 
         public bool CheckCatch()
@@ -48,16 +42,21 @@ namespace КПО_лаба_2
             return false;
         }
 
-        public void DoPrintCommand(StreamWriter writer)
+        public void Print(StreamWriter writer)
         {
-            string catPos = (cat.state == State.Playing || cat.state == State.Winner || cat.state == State.Loser) ? cat.location.ToString() : "??";
-            string mousePos = (mouse.state == State.Playing || mouse.state == State.Winner || mouse.state == State.Loser) ? mouse.location.ToString() : "??";
-            string dist = "";
+            string CatPosition = (cat.state == State.Playing || cat.state == State.Winner 
+                                  || cat.state == State.Loser) ? cat.location.ToString() : "??";
+
+            string MousePosition = (mouse.state == State.Playing || mouse.state == State.Winner 
+                                  || mouse.state == State.Loser) ? mouse.location.ToString() : "??";
+
+            string distance = "";
+
             if (cat.state == State.Playing && mouse.state == State.Playing)
             {
-                dist = GetDistance().ToString();
+                distance = GetDistance().ToString();
             }
-            writer.WriteLine(string.Format("{0,-5} {1,-7} {2}", catPos, mousePos, dist));
+            writer.WriteLine($"{CatPosition,-5} {MousePosition,-6} {distance}");
         }
 
         private int GetDistance()
