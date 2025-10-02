@@ -1,79 +1,93 @@
-﻿using System;
+using System;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace КПО_лаба_2
 {
     class Program
-    {
+        {
         static void Main(string[] args)
         {
-            // Process each test case file
-            string[] inputFiles = { "1.ChaseData.txt", "2.ChaseData.txt", "3.ChaseData.txt" };
+            int fileCount = 3;
 
-            foreach (string inputFile in inputFiles)
+            for (int i = 1; i <= fileCount; i++)
             {
-                // Extract number from filename (e.g., "1" from "1.ChaseData.txt")
-                string number = inputFile.Split('.')[0];
-                string outputFile = number + ".PursuitLog.txt";
+                string inputFile = $"{i}.ChaseData.txt";
+                string outputFile = $"{i}.PursuitLog.txt";
+
+                if (!File.Exists(inputFile))
+                {
+                    Console.WriteLine($"Файл {inputFile} не найден.");
+                    continue;
+                }
+                if (new FileInfo(inputFile).Length == 0)
+                {
+                    Console.WriteLine($"Файл {inputFile} пустой.");
+                    continue;
+                }
 
                 using (StreamReader reader = new StreamReader(inputFile))
                 using (StreamWriter writer = new StreamWriter(outputFile))
                 {
-                    int N = int.Parse(reader.ReadLine().Trim());
+                    string firstLine = reader.ReadLine();
+                    int FieldSize = Convert.ToInt32(firstLine);
 
-                    Game game = new Game(N);
+                    Game game = new Game(FieldSize);
 
-                    writer.WriteLine("Cat and Mouse");
+                    writer.WriteLine("Кот и Мышь");
                     writer.WriteLine();
-                    writer.WriteLine("Cat   Mouse   Distance");
-                    writer.WriteLine("-------------------");
+                    writer.WriteLine("Кот   Мышь   Расстояние");
+                    writer.WriteLine("-----------------------");
 
                     bool caught = false;
 
-                    while (!reader.EndOfStream && !caught)
+                    while (!reader.EndOfStream && caught == false)
                     {
                         string line = reader.ReadLine().Trim();
-                        if (string.IsNullOrEmpty(line)) continue;
 
                         if (line == "P")
-                        {
-                            game.DoPrintCommand(writer);
-                        }
+                            game.Print(writer);
                         else
                         {
                             string[] parts = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                             if (parts.Length == 2)
                             {
-                                char command = parts[0][0];
-                                int steps;
-                                if (int.TryParse(parts[1], out steps))
+                                string commandText = parts[0];
+                                char command = commandText[0];
+
+                                string moveText = parts[1];
+                                bool isNumber = int.TryParse(moveText, out int movement);
+
+                                if (isNumber)
                                 {
-                                    game.DoMoveCommand(command, steps);
+                                    game.DoingCommand(command, movement);
+
                                     if (game.CheckCatch())
-                                    {
                                         caught = true;
-                                    }
                                 }
                             }
+
                         }
                     }
 
                     writer.WriteLine("-------------------");
                     writer.WriteLine();
                     writer.WriteLine();
-                    writer.WriteLine("Distance traveled:   Mouse    Cat");
-                    writer.WriteLine("                                  " + game.mouse.distanceTraveled.ToString().PadLeft(5) + "      " + game.cat.distanceTraveled.ToString().PadLeft(5));
+                    writer.WriteLine("Пройденное расстояние:   Мышь    Кот");
+                    writer.WriteLine($"                        {game.mouse.traveledDistance,4}    {game.cat.traveledDistance,3}");
                     writer.WriteLine();
 
                     if (game.state == GameState.End)
                     {
-                        writer.WriteLine("Mouse caught at: " + game.cat.location);
+                        writer.WriteLine("Мышь поймана в клетке: " + game.cat.location);
                     }
                     else
                     {
-                        writer.WriteLine("Mouse evaded Cat");
+                        writer.WriteLine("Мышь ускользнула от кота");
                     }
                 }
+
+                Console.WriteLine($"Файл {outputFile} записан.");
             }
         }
     }
