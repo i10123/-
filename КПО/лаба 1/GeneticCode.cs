@@ -5,30 +5,23 @@ using System.Text;
 
 namespace КПО_лаба_1
 {
-    public struct GeneticData
-    {
-        public string protein;
-        public string organism;
-        public string amino_acids;
-    }
     public class GeneticCode
     {
         public List<GeneticData> data = new List<GeneticData>();
-        public int operationCount = 1;
         public void LoadSequences(string filename)
         {
             string[] lines = File.ReadAllLines(filename);
             for (int i = 0; i < lines.Length; i++)
             {
                 string[] parts = lines[i].Split('\t'); // белок, организм, аминокислота
-                GeneticData entry; 
+                GeneticData entry;
                 entry.protein = parts[0]; // белок
                 entry.organism = parts[1]; // организм
                 entry.amino_acids = Decode(parts[2]); // аминокислота
                 data.Add(entry);
             }
         }
-        public void Processing_Commands_and_Writing_Result(string commandFile, string outputFile)
+        public void ProcessingCommandsWritingResult(string commandFile, string outputFile)
         {
             using (StreamWriter writer = new StreamWriter(outputFile))
             {
@@ -38,39 +31,40 @@ namespace КПО_лаба_1
                 string[] commands = File.ReadAllLines(commandFile);
                 for (int i = 0; i < commands.Length; i++)
                 {
-                    string[] parts = commands[i].Split('\t');
+                    string[] PartsInCommand = commands[i].Split('\t');
 
                     StringBuilder header = new StringBuilder();
-                    header.Append(operationCount.ToString("D3"))
-                        .Append('\t').Append(parts[0]);
+                    header.Append((i + 1).ToString("D3")) // Номер операции
+                          .Append('\t').Append(PartsInCommand[0]);
 
-                    if (parts.Length > 1)
+                    if (PartsInCommand.Length > 1)
                     {
-                        string param1 = parts[0] == "search" ? Decode(parts[1]) : parts[1];
+                        string param1 = PartsInCommand[0] == "search" ? Decode(PartsInCommand[1]) : PartsInCommand[1];
                         header.Append('\t').Append(param1);
                     }
-                    if (parts.Length > 2) header.Append('\t').Append(parts[2]);
+                    if (PartsInCommand.Length > 2)
+                    {
+                        header.Append('\t').Append(PartsInCommand[2]);
+                    }
 
                     writer.WriteLine("--------------------------------------------------------------------------");
                     writer.WriteLine(header.ToString());
 
-                    switch (parts[0])
+                    switch (PartsInCommand[0])
                     {
                         case "search":
-                            if (parts.Length >= 2)
-                                Search(parts[1], writer);
+                            if (PartsInCommand.Length >= 2)
+                                Search(PartsInCommand[1], writer);
                             break;
                         case "diff":
-                            if (parts.Length >= 3)
-                                Diff(parts[1], parts[2], writer);
+                            if (PartsInCommand.Length >= 3)
+                                Diff(PartsInCommand[1], PartsInCommand[2], writer);
                             break;
                         case "mode":
-                            if (parts.Length >= 2)
-                                Mode(parts[1], writer);
+                            if (PartsInCommand.Length >= 2)
+                                Mode(PartsInCommand[1], writer);
                             break;
                     }
-
-                    operationCount++;
                 }
             }
         }
@@ -99,8 +93,8 @@ namespace КПО_лаба_1
         // Метод сравнения двух белков
         public void Diff(string prot1, string prot2, StreamWriter writer)
         {
-            GeneticData p1 = new GeneticData();
-            GeneticData p2 = new GeneticData();
+            GeneticData protein1 = new GeneticData();
+            GeneticData protein2 = new GeneticData();
             bool found1 = false;
             bool found2 = false;
 
@@ -108,12 +102,12 @@ namespace КПО_лаба_1
             {
                 if (data[i].protein == prot1)
                 {
-                    p1 = data[i];
+                    protein1 = data[i];
                     found1 = true;
                 }
                 if (data[i].protein == prot2)
                 {
-                    p2 = data[i];
+                    protein2 = data[i];
                     found2 = true;
                 }
             }
@@ -129,18 +123,18 @@ namespace КПО_лаба_1
                 return;
             }
 
-            int diff = 0; // Счётчик различий
-            int len = Math.Min(p1.amino_acids.Length, p2.amino_acids.Length);
+            int diff = 0;
+            int len = Math.Min(protein1.amino_acids.Length, protein2.amino_acids.Length);
 
-            for (int i = 0; i < len; i++) // Сравниваем символы
+            for (int i = 0; i < len; i++)
             {
-                if (p1.amino_acids[i] != p2.amino_acids[i])
+                if (protein1.amino_acids[i] != protein2.amino_acids[i])
                 {
                     diff++;
                 }
             }
+            diff += Math.Abs(protein1.amino_acids.Length - protein2.amino_acids.Length);
 
-            diff += Math.Abs(p1.amino_acids.Length - p2.amino_acids.Length);
             writer.WriteLine(diff.ToString());
         }
         // Метод поиска самой частой аминокислоты
@@ -167,44 +161,50 @@ namespace КПО_лаба_1
                 return;
             }
 
-            int[] freq = new int[256]; // Массив частот
+            Dictionary<char, int> frequency = new Dictionary<char, int>();
 
             for (int i = 0; i < p.amino_acids.Length; i++)
             {
                 char c = p.amino_acids[i];
-                freq[c]++;
+                if (frequency.ContainsKey(c))
+                    frequency[c]++;
+                else
+                    frequency[c] = 1;
             }
 
-            int max = 0;
-            char most = ' ';
+            int max_frequency = 0;
+            char popular_symbol = ' ';
 
-            for (int i = 0; i < freq.Length; i++)
+            List<char> keys = new List<char>(frequency.Keys);
+            for (int i = 0; i < keys.Count; i++)
             {
-                if (freq[i] > max || (freq[i] == max && i < most))
+                char key = keys[i];
+                int value = frequency[key];
+
+                if (value > max_frequency || (value == max_frequency && key < popular_symbol))
                 {
-                    max = freq[i];
-                    most = (char)i;
+                    max_frequency = value;
+                    popular_symbol = key;
                 }
             }
 
-            writer.WriteLine(most + "\t\t" + max);
+            writer.WriteLine(popular_symbol + "\t\t" + max_frequency);
         }
         public string Decode(string input_acid)
         {
             StringBuilder full = new StringBuilder();
             for (int i = 0; i < input_acid.Length; i++)
             {
-                if (char.IsDigit(input_acid[i]) && i + 1 < input_acid.Length)
-                {
-                    int num = input_acid[i] - '0';
-                    char letter = input_acid[i + 1];
-                    full.Append(letter, num);
-                    i++;
-                }
-                else
+                if (!(char.IsDigit(input_acid[i]) && i + 1 < input_acid.Length))
                 {
                     full.Append(input_acid[i]);
+                    continue;
                 }
+
+                int num = input_acid[i] - '0';
+                char letter = input_acid[i + 1];
+                full.Append(letter, num);
+                i++;
             }
             return full.ToString();
         }
