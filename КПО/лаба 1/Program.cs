@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Text;
 
 namespace КПО_лаба_1
 {
@@ -8,42 +7,45 @@ namespace КПО_лаба_1
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("0. X = 0");
-            Console.WriteLine("1. X = 1");
-            Console.WriteLine("2. X = 2");
-            Console.Write("Выберите номер набора данных (sequences.X & commands.X): ");
+            string N;
 
-            string N = Console.ReadLine();
-            while (true)
+            do
             {
-                switch (N)
+                Console.WriteLine("0. X = 0");
+                Console.WriteLine("1. X = 1");
+                Console.WriteLine("2. X = 2");
+                Console.WriteLine("Для выхода введите 111");
+                Console.Write("Ваш выбор: ");
+
+                N = Console.ReadLine();
+
+                if (N == "111")
+                    break;
+
+                if (N != "0" && N != "1" && N != "2")
                 {
-                    case "0":
-                    case "1":
-                    case "2":
-                        break;
-                    default:
-                        Console.Write("Неверный ввод! Повторите: ");
-                        N = Console.ReadLine();
-                        continue;
+                    Console.WriteLine("Неверный ввод!");
+                    continue;
                 }
-                break;
+
+                string inputSequences = $"sequences.{N}.txt";
+                string inputCommands = $"commands.{N}.txt";
+                string outputGenedata = $"genedata.{N}.txt";
+
+                if (!File.Exists(inputSequences) || !File.Exists(inputCommands))
+                {
+                    Console.WriteLine("Файл не найден!");
+                    continue;
+                }
+
+                var proc = new GeneticCode();
+                proc.LoadSequences(inputSequences);
+                proc.ProcessingCommandsWritingResult(inputCommands, outputGenedata);
+                Console.WriteLine("Результаты записаны!\n");
             }
+            while (true);
 
-            StringBuilder inputSequences = new StringBuilder("sequences.").Append(N).Append(".txt");
-            StringBuilder inputCommands = new StringBuilder("commands.").Append(N).Append(".txt");
-            StringBuilder outputGenedata = new StringBuilder("genedata.").Append(N).Append(".txt");
-
-            if (!File.Exists(inputSequences.ToString()) || !File.Exists(inputCommands.ToString()))
-            {
-                Console.WriteLine("Файл не найден!");
-                return;
-            }
-
-            var proc = new GeneticCode();
-            proc.LoadSequences(inputSequences.ToString());
-            proc.Processing_Commands_and_Writing_Result(inputCommands.ToString(), outputGenedata.ToString());
-            Console.WriteLine("Результаты записаны!");
+            Console.WriteLine("Программа завершена.");
         }
     }
 }
