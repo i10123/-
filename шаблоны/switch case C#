@@ -1,0 +1,55 @@
+using System;
+
+class Program
+{
+    static int InputCheck(string message, int min, int max)
+    {
+        int input;
+        while (true)
+        {
+            Console.Write(message);
+            string userInput = Console.ReadLine();
+
+            if (!int.TryParse(userInput, out input) || input < min || input > max)
+            {
+                Console.WriteLine($"Ошибка ввода! Пожалуйста, введите число от {min} до {max}.");
+            }
+            else
+            {
+                return input;
+            }
+        }
+    }
+
+    static void Main()
+    {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+        while (true)
+        {
+            Console.WriteLine("   Задачи:");
+            Console.WriteLine("1. Формирование файла с чередующейся четностью чисел.");
+            Console.WriteLine("2. База данных о студентах.");
+            Console.WriteLine("3. Файл, хранящий фамилии студентов, которые решили правильно.");
+            Console.WriteLine("0. Выход из программы.\n");
+
+            int n = InputCheck("Введите номер задачи: ", 0, 3);
+
+            switch (n)
+            {
+                case 0:
+                    Console.WriteLine("Завершение программы.");
+                    return;
+                case 1:
+                    Console.WriteLine("Реализация задачи 1.");
+                    break;
+                case 2:
+                    Console.WriteLine("Реализация задачи 2.");
+                    break;
+                case 3:
+                    Console.WriteLine("Реализация задачи 3.");
+                    break;
+            }
+        }
+    }
+}
