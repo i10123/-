@@ -1,0 +1,255 @@
+<Window x:Class="QR_Generator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="logo.ico" Title="QR Generator" Height="800" Width="900"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent">
+
+    <Window.Resources>
+        <Style TargetType="TextBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#2D2D30"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#2D2D30"/>
+        </Style>
+        <Style TargetType="Slider">
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+
+        <Style TargetType="ComboBox" x:Key="RedHeaderComboBox">
+            <Setter Property="Background" Value="DarkRed"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontFamily" Value="Sitka Text Semibold"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="BorderBrush" Value="Black"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <!-- Заголовок с текстом и стрелкой -->
+                            <Border Name="MainBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="2">
+                                <Grid>
+                                    <ContentPresenter Name="ContentSite"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Margin="6,0,25,0"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+
+                                    <!-- Стрелка справа -->
+                                    <Path x:Name="Arrow"
+                                  Fill="White"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,6,0"
+                                  Data="M 0 0 L 4 4 L 8 0 Z"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Кнопка раскрытия -->
+                            <ToggleButton Name="ToggleButton"
+                                  Grid.Column="2"
+                                  IsChecked="{Binding Path=IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                  ClickMode="Press"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  Focusable="False"/>
+
+                            <!-- Выпадающий список -->
+                            <Popup Name="Popup"
+                           Placement="Bottom"
+                           IsOpen="{TemplateBinding IsDropDownOpen}"
+                           AllowsTransparency="True"
+                           Focusable="False"
+                           PopupAnimation="Slide">
+                                <Grid Name="DropDown"
+                              SnapsToDevicePixels="True"
+                              MinWidth="{TemplateBinding ActualWidth}"
+                              MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border x:Name="DropDownBorder"
+                                    Background="#111111"
+                                    BorderBrush="Black"
+                                    BorderThickness="1"/>
+                                    <ScrollViewer Margin="4,6,4,6"
+                                          SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True"
+                                            KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="30"/>
+            <!-- Верхняя панель -->
+            <RowDefinition Height="*"/>
+            <!-- Основной интерфейс -->
+        </Grid.RowDefinitions>
+
+        <!-- Верхняя панель -->
+        <Border Background="Black" Grid.Row="0" MouseLeftButtonDown="DragWindow" Margin="20,20,20,750" Grid.RowSpan="2">
+            <DockPanel LastChildFill="False">
+                <Image Source="logo.ico" Height="24" Margin="10,0"/>
+                <TextBlock Text="QR Generator" Foreground="Red" FontSize="16" VerticalAlignment="Center" Margin="25,0"/>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <Button Content="—" Width="30" Click="Minimize_Click" Background="Red" FontWeight="Bold" Foreground="White"/>
+                    <Button Content="✕" Width="30" Click="Close_Click" Background="Red" FontWeight="Bold" FontSize="14" Foreground="White"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Основной интерфейс -->
+        <Grid Grid.Row="1" Margin="20,20,20,97" Background="#2D2D30">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Левая колонка: Настройки -->
+            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                <TextBlock Text="QR Generator" FontSize="36" FontWeight="Bold" Margin="0,0,0,10" Width="392" >
+                    <TextBlock.Foreground>
+                        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                            <GradientStop Color="Red"/>
+                            <GradientStop Color="White" Offset="0.92"/>
+                            <GradientStop Color="#FFFFFEFE" Offset="1"/>
+                        </LinearGradientBrush>
+                    </TextBlock.Foreground>
+                </TextBlock>
+                <TextBlock Margin="0,0,0,20" FontFamily="Sitka Text Semibold" FontStyle="Italic" Foreground="White" Width="388" ><Run Text="Создайте QR-код"/><Run Language="ru-ru" Text=" за несколько секунд"/></TextBlock>
+
+                <TabControl x:Name="tabControl" Width="384">
+                    <TabItem Header="Текст">
+                        <StackPanel Margin="10">
+                            <TextBlock Text="Введите текст" Margin="0,0,0,5" FontSize="14" Foreground="Black" />
+                            <TextBox x:Name="txtText" Height="100" AcceptsReturn="True" FontSize="14" />
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="URL">
+                        <StackPanel Margin="10">
+                            <TextBlock Text="Введите URL" Margin="0,0,0,5" FontSize="14" />
+                            <TextBox x:Name="txtUrl" FontSize="14" />
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="Email">
+                        <StackPanel Margin="10">
+                            <TextBlock Text="Email" Margin="0,0,0,5" FontSize="14" />
+                            <TextBox x:Name="txtEmail" FontSize="14" />
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="Контакт">
+                        <StackPanel Margin="10">
+                            <TextBlock Text="Телефон" Margin="0,0,0,5" FontSize="14" />
+                            <TextBox x:Name="txtPhone" FontSize="14" />
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="WiFi">
+                        <StackPanel Margin="10">
+                            <TextBlock Text="Тип сети" Margin="0,0,0,5" FontSize="14" />
+                            <ComboBox x:Name="cmbWifiType" SelectedIndex="0" FontSize="14">
+                                <ComboBoxItem Content="WPA" />
+                                <ComboBoxItem Content="WEP" />
+                                <ComboBoxItem Content="nopass" />
+                            </ComboBox>
+                            <TextBlock Text="SSID" Margin="0,10,0,5" FontSize="14" />
+                            <TextBox x:Name="txtSsid" FontSize="14" />
+                            <TextBlock Text="Пароль" Margin="0,10,0,5" FontSize="14" />
+                            <TextBox x:Name="txtPassword" FontSize="14" />
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="Геолокация">
+                        <StackPanel Margin="10">
+                            <TextBlock Text="Широта" Margin="0,0,0,5" FontSize="14" />
+                            <TextBox x:Name="txtWidth" FontSize="14" />
+                            <TextBlock Text="Долгота" Margin="0,10,0,5" FontSize="14" />
+                            <TextBox x:Name="txtLong" FontSize="14" />
+                        </StackPanel>
+                    </TabItem>
+                </TabControl>
+
+                <TextBlock Text="Уровень коррекции" Margin="20,20,0,5" Foreground="White" FontFamily="Sitka Text Semibold" FontSize="16" Width="407" />
+                <StackPanel x:Name="stackPanel_correction" Orientation="Horizontal">
+                    <Button Content="L" x:Name="btn_L" Click="SetLevelCorrection_Click" Tag="L" Margin="5" Background="Black" Foreground="White" BorderBrush="Black" FontSize="16" Width="95" FontWeight="Bold" />
+                    <Button Content="M" x:Name="btn_M" Click="SetLevelCorrection_Click" Tag="M" Margin="5" Background="Black" Foreground="White" Width="95" BorderBrush="Black" FontSize="16" FontWeight="Bold" />
+                    <Button Content="Q" x:Name="btn_Q" Click="SetLevelCorrection_Click" Tag="Q" Margin="5" Background="Black" Foreground="White" BorderBrush="Black" Width="95" FontSize="16" FontWeight="Bold" />
+                    <Button Content="H" x:Name="btn_H" Click="SetLevelCorrection_Click" Tag="H" Margin="5" Foreground="White" Background="Black" BorderBrush="Black" Width="95" FontSize="16" FontWeight="Bold" />
+                </StackPanel>
+
+                <TextBlock Text="Размер (px)" Margin="20,10,0,5" Width="406" FontSize="16" Foreground="White" FontFamily="Sitka Text Semibold" />
+                <Slider x:Name="sldSize" Minimum="100" Maximum="1000" Value="300" ValueChanged="SldSize_ValueChanged" Width="404" />
+
+                <TextBlock Text="Цвет кода" Margin="20,10,10,5" Width="389" HorizontalAlignment="Center" Foreground="White" FontFamily="Sitka Text Semibold" FontSize="16" />
+                <StackPanel x:Name="stackPanel_colors" Orientation="Horizontal" Width="403">
+                    <Button x:Name="btnColorBlack" Background="Black" Width="40" Height="40" Click="SetColor_Click" Tag="#000000" Margin="5" BorderBrush="{x:Null}" />
+                    <Button x:Name="btnColorBlue" Background="Blue" Width="40" Height="40" Click="SetColor_Click" Tag="#0000FF" Margin="5" BorderBrush="{x:Null}" />
+                    <Button x:Name="btnColorRed" Background="Red" Width="40" Height="40" Click="SetColor_Click" Tag="#FF0000" Margin="5" BorderBrush="{x:Null}" />
+                    <Button x:Name="btnColorIndigo" Background="#4B0082" Width="40" Height="40" Click="SetColor_Click" Tag="#4B0082" Margin="5" BorderBrush="{x:Null}" />
+                    <Button x:Name="btnColorPurple" Background="Purple" Width="40" Height="40" Click="SetColor_Click" Tag="#800080" Margin="5" BorderBrush="{x:Null}" />
+                    <Button x:Name="btnColorPink" Background="Pink" Width="40" Height="40" Click="SetColor_Click" Tag="#FFC0CB" Margin="5" BorderBrush="{x:Null}" />
+                    <Button x:Name="btnColorOrange" Background="Orange" Width="40" Height="40" Click="SetColor_Click" Tag="#FFA500" Margin="5" BorderBrush="{x:Null}" />
+                    <Button x:Name="btnColorGreen" Background="Green" Width="40" Height="40" Click="SetColor_Click" Tag="#008000" Margin="5" BorderBrush="{x:Null}" />
+                </StackPanel>
+
+                <TextBlock Text="Формат" Margin="20,10,0,5" Foreground="White" FontFamily="Sitka Text Semibold" Width="103" HorizontalAlignment="Left" FontSize="16" />
+                <ComboBox x:Name="cmbFormat"
+                          Style="{StaticResource RedHeaderComboBox}"
+                          Margin="20,0,5,15"
+                          SelectedIndex="0"
+                          SelectionChanged="CmbFormat_SelectionChanged"
+                          Width="125"
+                          HorizontalAlignment="Left"/>
+
+                <Button Content="Сгенерировать" Click="Generate_Click" Margin="0,20,0,0" Width="250" BorderBrush="Black" Foreground="White" FontWeight="Bold" FontSize="18" FontFamily="Comic Sans MS" >
+                    <Button.Background>
+                        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                            <GradientStop Color="Black"/>
+                            <GradientStop Color="Red" Offset="1"/>
+                            <GradientStop Color="#FFEC0000" Offset="1"/>
+                            <GradientStop Color="#FFFE0000" Offset="1"/>
+                            <GradientStop Color="#FFFA0000" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Button.Background>
+                </Button>
+            </StackPanel>
+
+            <!-- Правая колонка: Предпросмотр -->
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Предпросмотр" FontSize="24" FontWeight="Bold" Margin="0,0,0,20" TextAlignment="Justify" Width="402" Height="38" RenderTransformOrigin="0.5,0.433" >
+                    <TextBlock.Foreground>
+                        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                            <GradientStop Color="Black"/>
+                            <GradientStop Color="Red" Offset="1"/>
+                            <GradientStop Color="White" Offset="0.15"/>
+                            <GradientStop Color="#FFFFABAB" Offset="1"/>
+                            <GradientStop Color="White" Offset="1"/>
+                        </LinearGradientBrush>
+                    </TextBlock.Foreground>
+                </TextBlock>
+                <Image x:Name="imgPreview" Stretch="Uniform" Height="385" Width="278" Source="preview.jpg"/>
+                <Button Content="Скачать" Click="Download_Click" Margin="0,20,0,0" x:Name="btnDownload" Width="277" RenderTransformOrigin="0.513,-1.851" Foreground="White" BorderBrush="Black" IsEnabled="False" FontSize="18" FontWeight="Bold" FontFamily="Comic Sans MS" >
+                    <Button.Background>
+                        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                            <GradientStop Color="Black"/>
+                            <GradientStop Color="#FF239819" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Button.Background>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
