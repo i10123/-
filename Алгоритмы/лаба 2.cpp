@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <queue>
 #include <limits>
+#include <vector>
 #include <string>
 using namespace std;
 
@@ -17,64 +18,85 @@ struct Node {
 static int getHeight(Node* node) {
     return node ? node->height : 0;
 }
-
 static int getBalance(Node* node) {
     return node ? getHeight(node->left) - getHeight(node->right) : 0;
 }
-
 static void updateHeight(Node* node) {
     node->height = 1 + max(getHeight(node->left), getHeight(node->right));
 }
 
 static Node* rotateRight(Node* y) {
     Node* x = y->left;
-    Node* T2 = x->right;
+    Node* T = x->right;
 
     x->right = y;
-    y->left = T2;
+    y->left = T;
 
     updateHeight(y);
     updateHeight(x);
 
     return x;
 }
-
+//     y         x
+//    /         / \
+//   x    ->   A   y
+//  / \           / \
+// A   T2        T2  B
 static Node* rotateLeft(Node* x) {
     Node* y = x->right;
-    Node* T2 = y->left;
+    Node* T = y->left;
 
     y->left = x;
-    x->right = T2;
+    x->right = T;
 
     updateHeight(x);
     updateHeight(y);
 
     return y;
 }
+// x            y
+//  \          / \
+//   y   ->   x   B
+//  / \      / \
+// T   B    A   T
 
 static Node* balance(Node* node) {
     updateHeight(node);
-    int bf = getBalance(node);
+    int balance_factor = getBalance(node);
 
-    if (bf > 1) {
+    if (balance_factor > 1) {
         if (getBalance(node->left) < 0)
-            node->left = rotateLeft(node->left); // LR
-        return rotateRight(node); // LL
+            node->left = rotateLeft(node->left);
+        return rotateRight(node);
     }
-    if (bf < -1) {
+      //      z         z
+      //     /         /
+      //    x    ->   y  ->  y
+      //     \       /      / \
+      //      y     x      x   z
+
+    if (balance_factor < -1) {
         if (getBalance(node->right) > 0)
-            node->right = rotateRight(node->right); // RL
-        return rotateLeft(node); // RR
+            node->right = rotateRight(node->right);
+        return rotateLeft(node);
     }
+    //   z      z
+    //    \      \
+    //     x  ->  y   ->   y
+    //    /        \      / \
+    //   y          x    z   x
+
     return node;
 }
 
-static Node* insert(Node* node, int key) {
-    if (!node) return new Node(key);
+static Node* add(Node* node, int key) {
+    if (!node) 
+        return new Node(key);
+
     if (key < node->key)
-        node->left = insert(node->left, key);
+        node->left = add(node->left, key);
     else if (key > node->key)
-        node->right = insert(node->right, key);
+        node->right = add(node->right, key);
     else {
         cout << "Элемент уже существует.\n";
         return node;
@@ -86,46 +108,50 @@ static Node* findMin(Node* node) {
     return node->left ? findMin(node->left) : node;
 }
 
-static Node* removeMin(Node* node) {
-    if (!node->left) return node->right;
-    node->left = removeMin(node->left);
+static Node* deleteMin(Node* node) {
+    if (!node->left) 
+        return node->right;
+    node->left = deleteMin(node->left);
     return balance(node);
 }
 
-static Node* remove(Node* node, int key) {
+static Node* Delete(Node* node, int key) {
     if (!node) {
         cout << "Элемент не найден.\n";
         return nullptr;
     }
     if (key < node->key)
-        node->left = remove(node->left, key);
+        node->left = Delete(node->left, key);
     else if (key > node->key)
-        node->right = remove(node->right, key);
+        node->right = Delete(node->right, key);
     else {
         Node* left = node->left;
         Node* right = node->right;
         delete node;
-        if (!right) return left;
+
+        if (!right) 
+            return left;
         Node* min = findMin(right);
-        min->right = removeMin(right);
+        min->right = deleteMin(right);
         min->left = left;
         return balance(min);
     }
     return balance(node);
 }
 
-static void freeTree(Node* node) {
-    if (!node) return;
-    freeTree(node->left);
-    freeTree(node->right);
+static void clearMemory(Node* node) {
+    if (!node) 
+        return;
+    clearMemory(node->left);
+    clearMemory(node->right);
     delete node;
 }
-
-static int inputInt(const string& prompt) {
+static int inputInt(const string& input) {
     int value;
     while (true) {
-        cout << prompt;
-        if (cin >> value) return value;
+        cout << input;
+        if (cin >> value) 
+            return value;
         else {
             cout << "Ошибка: введите целое число.\n";
             cin.clear();
@@ -134,22 +160,22 @@ static int inputInt(const string& prompt) {
     }
 }
 
-static void printTreeStructured(Node* root) {
-    if (!root) {
+static void printTree(Node* tree) {
+    if (!tree) {
         cout << "(пустое дерево)\n";
         return;
     }
 
     vector<vector<string>> result;
     queue<Node*> q;
-    q.push(root);
+    q.push(tree);
 
     while (!q.empty()) {
         int level_size = q.size();
         vector<string> level_values;
 
         bool has_non_null = false;
-        for (int i = 0; i < level_size; ++i) {
+        for (int i = 0; i < level_size; i++) {
             Node* node = q.front();
             q.pop();
 
@@ -167,20 +193,19 @@ static void printTreeStructured(Node* root) {
         }
 
         result.push_back(level_values);
-        if (!has_non_null) break;
+        if (!has_non_null) 
+            break;
     }
 
-    // Вычисляем отступы для красивого вывода
     int height = result.size();
-    for (int level = 0; level < height; ++level) {
+    for (int level = 0; level < height; level++) {
         int level_size = result[level].size();
         int indent = (1 << (height - level - 1)) - 1;
         int spacing = (1 << (height - level)) - 1;
 
-        // Отступ слева
         cout << string(indent * 3, ' ');
 
-        for (int i = 0; i < level_size; ++i) {
+        for (int i = 0; i < level_size; i++) {
             cout << setw(3) << result[level][i];
             if (i < level_size - 1) {
                 cout << string(spacing * 3, ' ');
@@ -190,7 +215,6 @@ static void printTreeStructured(Node* root) {
     }
 }
 
-// Меню
 static void menu() {
     cout << "\n=== Меню ===\n";
     cout << "1. Добавить элемент\n";
@@ -200,10 +224,9 @@ static void menu() {
     cout << "Выберите действие: ";
 }
 
-// Главная функция
 int main() {
     setlocale(LC_ALL, "Russian");
-    Node* root = nullptr;
+    Node* tree = nullptr;
     int choice;
 
     do {
@@ -212,27 +235,30 @@ int main() {
 
         switch (choice) {
         case 1: {
-            int key = inputInt("Введите значение для добавления: ");
-            root = insert(root, key);
+            int count = inputInt("Сколько значений вы хотите добавить? ");
+            for (int i = 0; i < count; ++i) {
+                int key = inputInt("Введите значение №" + to_string(i + 1) + ": ");
+                tree = add(tree, key);
+            }
             break;
         }
         case 2: {
             int key = inputInt("Введите значение для удаления: ");
-            root = remove(root, key);
+            tree = Delete(tree, key);
             break;
         }
         case 3:
             cout << "Структура дерева:\n";
-            printTreeStructured(root);
+            printTree(tree);
             break;
         case 0:
-            cout << "Выход...\n";
+            cout << "Выход.\n";
             break;
         default:
-            cout << "Неверный выбор. Повторите.\n";
+            cout << "Неверный выбор.\n";
         }
     } while (choice != 0);
 
-    freeTree(root);
+    clearMemory(tree);
     return 0;
 }
