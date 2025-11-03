@@ -5,6 +5,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -86,10 +87,34 @@ namespace QR_Generator
         }
 
         // слайдер для размера
-        private void SldSize_ValueChanged(object clicked_btn, RoutedPropertyChangedEventArgs<double> e)
+        private void SldSize_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            size_QR = (int)sldSize.Value;
-            GenerateQR();
+            // округление до ближайшего шага 50
+            int step = 50;
+            int roundedValue = (int)(Math.Round(sldSize.Value / step) * step);
+            if (sldSize.Value != roundedValue)
+                sldSize.Value = roundedValue;
+
+            txtSizeLabel.Text = $"Размер: {roundedValue} px";
+        }
+
+        private void Track_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is Track track)
+            {
+                var slider = sldSize;
+                System.Windows.Point pt = e.GetPosition(track);
+
+                double ratio = pt.X / track.ActualWidth;
+                double newValue = slider.Minimum + ratio * (slider.Maximum - slider.Minimum);
+
+                // округление до ближайшего шага 50
+                int step = 50;
+                newValue = Math.Round(newValue / step) * step;
+
+                slider.Value = newValue;
+                e.Handled = true;
+            }
         }
 
         private void Generate_Click(object clicked_btn, RoutedEventArgs e)
