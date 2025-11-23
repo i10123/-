@@ -35,8 +35,8 @@ namespace QR_Generator
         {
             try
             {
-                string botToken = "8499800086:AAFg31zx8W2MWSOcrZCQnBkITrzUD4A_ig4";
-                string chatId = "6250975346";
+                string botToken = "";
+                string chatId = "";
 
                 using HttpClient client = new();
                 string url = $"https://api.telegram.org/bot{botToken}/sendMessage?chat_id={chatId}&text={message}";
@@ -187,4 +187,5 @@ namespace QR_Generator
             return Convert.ToBase64String(bytes);
         }
     }
+
 }
