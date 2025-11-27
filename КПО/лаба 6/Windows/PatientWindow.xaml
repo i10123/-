@@ -1,0 +1,70 @@
+﻿<Window x:Class="Hospital.Windows.PatientWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Пациент" Height="720" Width="500"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None"
+        AllowsTransparency="True" Background="Transparent" Icon="logo.ico">
+
+    <materialDesign:Card UniformCornerRadius="15" Margin="10" Padding="20">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock x:Name="TitleText" Text="Данные пациента" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+                <TextBox x:Name="LastNameBox" materialDesign:HintAssist.Hint="Фамилия *" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0,5"/>
+                <TextBox x:Name="FirstNameBox" materialDesign:HintAssist.Hint="Имя *" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0,5"/>
+                <TextBox x:Name="MiddleNameBox" materialDesign:HintAssist.Hint="Отчество" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0,5"/>
+
+                <DatePicker x:Name="BirthDatePicker" materialDesign:HintAssist.Hint="Дата рождения *" Style="{StaticResource MaterialDesignFloatingHintDatePicker}" Margin="0,10"/>
+
+                <ComboBox x:Name="GenderCombo" materialDesign:HintAssist.Hint="Пол *" Style="{StaticResource MaterialDesignFloatingHintComboBox}" Margin="0,10">
+                    <ComboBoxItem Content="Мужской"/>
+                    <ComboBoxItem Content="Женский"/>
+                </ComboBox>
+
+                <ComboBox x:Name="StatusCombo" materialDesign:HintAssist.Hint="Текущий статус" Style="{StaticResource MaterialDesignFloatingHintComboBox}" Margin="0,10">
+                    <ComboBoxItem Content="Поступил"/>
+                    <ComboBoxItem Content="На лечении"/>
+                    <ComboBoxItem Content="Выписан"/>
+                </ComboBox>
+
+                <Separator Margin="0,15"/>
+                <TextBlock Text="Данные о госпитализации" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,5"/>
+
+                <Grid Margin="0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <DatePicker x:Name="AdmissionDatePicker" Grid.Column="0" materialDesign:HintAssist.Hint="Дата поступления" Margin="0,0,10,0"/>
+                    <materialDesign:TimePicker x:Name="AdmissionTimePicker" Grid.Column="1" materialDesign:HintAssist.Hint="Время поступления" Is24Hours="True"/>
+                </Grid>
+
+                <Grid Margin="0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <DatePicker x:Name="DischargeDatePicker" Grid.Column="0" materialDesign:HintAssist.Hint="Дата выписки" Margin="0,0,10,0"/>
+                    <materialDesign:TimePicker x:Name="DischargeTimePicker" Grid.Column="1" materialDesign:HintAssist.Hint="Время выписки" Is24Hours="True"/>
+                </Grid>
+
+
+                <Separator Margin="0,10"/>
+                <TextBlock Text="Документы и контакты" FontWeight="Bold" Foreground="Gray" Margin="0,5"/>
+
+                <TextBox x:Name="PassportBox" materialDesign:HintAssist.Hint="Номер паспорта" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0,5"/>
+                <TextBox x:Name="PhoneBox" materialDesign:HintAssist.Hint="Телефон" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0,5"/>
+
+                <TextBox x:Name="AddressBox" materialDesign:HintAssist.Hint="Адрес проживания" 
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}" 
+                         Margin="0,5" Height="60" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" AcceptsReturn="True"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                    <Button Content="Отмена" Style="{StaticResource MaterialDesignFlatButton}" Click="Cancel_Click"/>
+                    <Button x:Name="SaveBtn" Content="СОХРАНИТЬ" Style="{StaticResource MaterialDesignRaisedButton}" Click="Save_Click" Margin="10,0,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </materialDesign:Card>
+</Window>

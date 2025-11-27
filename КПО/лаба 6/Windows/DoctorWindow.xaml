@@ -1,0 +1,104 @@
+﻿<Window x:Class="Hospital.Windows.DoctorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Рабочее место врача" Height="700" Width="1100"
+        WindowStartupLocation="CenterScreen" Icon="logo.ico">
+
+    <Grid Background="#F0F0F0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <materialDesign:ColorZone Mode="PrimaryMid" Padding="16">
+            <DockPanel>
+                <materialDesign:PackIcon Kind="Doctor" Width="30" Height="30" VerticalAlignment="Center" Margin="0,0,15,0"/>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="DoctorNameText" Text="Др. Хаус" FontSize="18" FontWeight="Bold"/>
+                    <TextBlock x:Name="DoctorInfoText" Text="Хирургия" FontSize="12" Opacity="0.8"/>
+                </StackPanel>
+
+                <Button DockPanel.Dock="Right" Content="ВЫЙТИ" Click="Logout_Click" Style="{StaticResource MaterialDesignFlatButton}" 
+                        Foreground="White" Width="100" HorizontalAlignment="Right"/>
+            </DockPanel>
+        </materialDesign:ColorZone>
+
+        <Grid Grid.Row="1" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                <TextBlock Text="Пациенты:" VerticalAlignment="Center" FontSize="16" FontWeight="Bold" Margin="0,0,20,0" Foreground="Gray"/>
+
+                <Button x:Name="AdmitPatientBtn" Click="AdmitPatient_Click" Style="{StaticResource MaterialDesignRaisedButton}"
+                        Background="{DynamicResource SecondaryHueMidBrush}" BorderBrush="{DynamicResource SecondaryHueMidBrush}"
+                        Foreground="{DynamicResource SecondaryHueMidForegroundBrush}" Margin="0,0,10,0" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="AccountPlus" Margin="0,0,8,0"/>
+                        <TextBlock Text="НОВЫЙ ПАЦИЕНТ"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Click="OpenMedicalRecord_Click" Style="{StaticResource MaterialDesignRaisedButton}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="ClipboardPulse" Margin="0,0,8,0"/>
+                        <TextBlock Text="ОТКРЫТЬ МЕД. КАРТУ"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Content="ОБНОВИТЬ" Click="Refresh_Click" Margin="10,0,0,0" Style="{StaticResource MaterialDesignOutlinedButton}"/>
+
+                <TextBox x:Name="SearchBox" Width="300" Margin="30,0,0,0" materialDesign:HintAssist.Hint="Поиск"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}" TextChanged="SearchBox_TextChanged"/>
+            </StackPanel>
+
+            <DataGrid x:Name="PatientsGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" 
+                      materialDesign:DataGridAssist.CellPadding="13,8,8,8" Background="White" SelectionMode="Single">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Binding="{Binding FullName}" Header="ФИО Пациента" Width="*"/>
+                    <DataGridTextColumn Binding="{Binding BirthDate, StringFormat=dd.MM.yyyy}" Header="Дата рожд." Width="120"/>
+                    <DataGridTextColumn Binding="{Binding GenderRu}" Header="Пол" Width="80"/>
+                    <DataGridTextColumn Binding="{Binding DiagnosisRu}" Header="Диагноз" Width="200" FontWeight="Bold"/>
+                    <DataGridTextColumn Binding="{Binding StatusRu}" Header="Статус" Width="100"/>
+
+                    <DataGridTemplateColumn Header="Действия" Width="180">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource MaterialDesignIconForegroundButton}" 
+                                            Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                            Click="RowOpen_Click" 
+                                            ToolTip="Открыть карту">
+                                        <materialDesign:PackIcon Kind="ArrowRightBoldCircle"/>
+                                    </Button>
+
+                                    <Button Style="{StaticResource MaterialDesignIconForegroundButton}" 
+                                            Foreground="Gray"
+                                            Click="EditPatient_Click" 
+                                            ToolTip="Редактировать данные">
+                                        <materialDesign:PackIcon Kind="Pencil"/>
+                                    </Button>
+
+                                    <Button Style="{StaticResource MaterialDesignIconForegroundButton}" 
+                                            Foreground="Red"
+                                            Click="DeletePatient_Click" 
+                                            ToolTip="Удалить"
+                                            Visibility="{Binding DataContext.DutyVisibility, RelativeSource={RelativeSource AncestorType=Window}}">
+                                        <materialDesign:PackIcon Kind="Delete"/>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <TextBlock x:Name="EmptyText" Text="Нет пациентов." HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="1" 
+                       FontSize="16" Foreground="Gray" Visibility="Collapsed"/>
+        </Grid>
+    </Grid>
+</Window>
